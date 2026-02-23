@@ -1,11 +1,15 @@
 import type {
+  AccountInfo,
   AppVersionInfo,
   DeviceRegistrationResponse,
   LoginResponse,
   MetricsBatch,
   MetricsResponse,
+  PasswordRecoveryRequest,
+  PasswordResetRequest,
   PushNotification,
   PushTokenRegistration,
+  RegisterRequest,
   VpnTokenRequest,
   VpnTokenResponse,
 } from "../types/contracts.js";
@@ -41,12 +45,36 @@ export class HttpClient {
     return this.post<LoginResponse>("/auth/refresh", { refresh_token: refreshToken });
   }
 
+  async register(payload: RegisterRequest): Promise<LoginResponse> {
+    return this.post<LoginResponse>("/auth/register", payload);
+  }
+
+  async recoverPassword(payload: PasswordRecoveryRequest): Promise<void> {
+    await this.post<unknown>("/auth/password/recover", payload);
+  }
+
+  async resetPassword(payload: PasswordResetRequest): Promise<void> {
+    await this.post<unknown>("/auth/password/reset", payload);
+  }
+
   async oauthLogin(provider: string, code: string): Promise<LoginResponse> {
     return this.post<LoginResponse>("/auth/oauth", { provider, code });
   }
 
   async registerDevice(accessToken: string, deviceId: string): Promise<DeviceRegistrationResponse> {
     return this.post<DeviceRegistrationResponse>("/devices/register", { device_id: deviceId }, accessToken);
+  }
+
+  async listAccounts(accessToken: string): Promise<AccountInfo[]> {
+    return this.get<AccountInfo[]>("/accounts", accessToken);
+  }
+
+  async switchAccount(accessToken: string, accountId: string): Promise<LoginResponse> {
+    return this.post<LoginResponse>("/accounts/switch", { account_id: accountId }, accessToken);
+  }
+
+  async deleteAccount(accessToken: string, accountId: string): Promise<void> {
+    await this.delete(`/accounts/${accountId}`, accessToken);
   }
 
   async requestVpnToken(accessToken: string, payload: VpnTokenRequest): Promise<VpnTokenResponse> {
@@ -88,6 +116,19 @@ export class HttpClient {
     }
 
     return (await response.json()) as T;
+  }
+
+  private async delete(path: string, accessToken?: string): Promise<void> {
+    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+      method: "DELETE",
+      headers: {
+        ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+      },
+    });
+
+    if (!response.ok) {
+      throw new HttpError(response.status, path);
+    }
   }
 
   private async get<T>(path: string, accessToken?: string): Promise<T> {

@@ -2,7 +2,7 @@
 
 Документ фиксирует только оставшиеся задачи из последнего расширенного ТЗ, которые в этом репозитории ещё **не реализованы**.
 
-## 1) Нативный VPN‑мост и SecureStore
+## 1) Нативный VPN‑мост и SecureStore ✅
 
 - iOS native VPN‑модуль на Swift (Network Extension / `NEPacketTunnelProvider`) с методами `connect(config)` и `disconnect()`.
 - Настройка TLS/SNI в iOS‑туннеле на уровне нативного кода.
@@ -14,7 +14,7 @@
   - iOS Keychain;
   - Android EncryptedSharedPreferences.
 
-## 2) Базовый UI (Core MVP)
+## 2) Базовый UI (Core MVP) ✅
 
 - React Navigation (Stack + Tab) с экранами Auth/Main VPN/Status/Notifications/Accounts.
 - Auth UI: логин/регистрация/восстановление пароля/выбор OAuth‑провайдера.
@@ -23,9 +23,10 @@
 - Accounts UI: список/выбор/удаление аккаунтов.
 - Notifications UI: inbox, mark as read, deep‑link навигация.
 
-## 3) Интеграция с API (новые эндпоинты)
+## 3) Интеграция с API (новые эндпоинты) ✅
 
-- Подтвердить серверную реализацию маршрутов (вне scope текущего репозитория).
+- Добавлены client-side контракты/вызовы для `/auth/register`, `/auth/password/recover`, `/auth/password/reset`, `/accounts`, `/accounts/switch`, `/accounts/:id` (DELETE).
+- Подтверждение серверной реализации маршрутов остаётся вне scope текущего репозитория.
 
 ## 4) RED‑метрики и ресурсные метрики ✅
 
