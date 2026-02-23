@@ -3,14 +3,39 @@ import { AuthModule } from "./authModule.js";
 import { DeviceModule } from "./deviceModule.js";
 import type { MetricsBatch, MetricsEvent } from "../types/contracts.js";
 
+export interface MetricsIntervalScheduler {
+  schedule(handler: () => Promise<void>, intervalMs: number): void;
+  stop(): void;
+}
+
+export class IntervalMetricsScheduler implements MetricsIntervalScheduler {
+  private timer: ReturnType<typeof setInterval> | null = null;
+
+  schedule(handler: () => Promise<void>, intervalMs: number): void {
+    this.stop();
+    this.timer = setInterval(() => {
+      void handler();
+    }, Math.max(1, intervalMs));
+  }
+
+  stop(): void {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+  }
+}
+
 export class MetricsModule {
   private readonly queue: MetricsEvent[] = [];
   private readonly eventIds = new Set<string>();
+  private periodicFlushSessionId: string | null = null;
 
   constructor(
     private readonly api: HttpClient,
     private readonly auth: AuthModule,
     private readonly devices: DeviceModule,
+    private readonly scheduler: MetricsIntervalScheduler = new IntervalMetricsScheduler(),
   ) {}
 
   enqueue(event: MetricsEvent): void {
@@ -35,6 +60,23 @@ export class MetricsModule {
   clearQueue(): void {
     this.queue.length = 0;
     this.eventIds.clear();
+  }
+
+  startPeriodicFlush(sessionId: string, intervalMs = 120_000): void {
+    this.periodicFlushSessionId = sessionId;
+
+    this.scheduler.schedule(async () => {
+      if (!this.periodicFlushSessionId || this.queue.length === 0) {
+        return;
+      }
+
+      await this.flush(this.periodicFlushSessionId);
+    }, intervalMs);
+  }
+
+  stopPeriodicFlush(): void {
+    this.periodicFlushSessionId = null;
+    this.scheduler.stop();
   }
 
   async flush(sessionId: string, maxRetries = 3, batchSize = 50): Promise<void> {

@@ -92,6 +92,8 @@ export class AppCoreModule {
         }),
       );
 
+      this.modules.metrics.startPeriodicFlush(sessionId);
+
       return sessionId;
     } catch (error) {
       this.modules.metrics.enqueue(
@@ -109,6 +111,7 @@ export class AppCoreModule {
 
     this.modules.metrics.enqueue(this.createEvent("vpn_disconnect_click", { source: "main_screen" }));
 
+    this.modules.metrics.stopPeriodicFlush();
     await this.modules.vpn.disconnect();
 
     if (sessionId) {
@@ -122,6 +125,7 @@ export class AppCoreModule {
       return;
     }
 
+    this.modules.metrics.stopPeriodicFlush();
     await this.modules.vpn.disconnect();
     this.modules.metrics.enqueue(this.createEvent("user_logout", { account_id: accountId }));
     this.modules.metrics.clearQueue();
