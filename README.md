@@ -10,6 +10,7 @@
 - `MetricsModule` — буферизация, дедупликация, батч-отправка в `/api/v1/metrics/client` с chunking и retry/backoff.
 - `PushModule` — регистрация push token для активного аккаунта, очередь отложенной отправки token при сетевых ошибках, inbox-уведомления, локальный кеш inbox и отметка о прочтении.
 - `UpdateModule` — проверка версии приложения, forced-update флага, сравнение semver для minimum supported version и определения доступного обновления.
+- `AppCoreModule` — orchestration сценарии верхнего уровня: login+device registration+push flush, connect/disconnect VPN с метриками, switch account и logout cleanup.
 - `HttpClient` — typed-контракты для основных API.
 
 > Примечание: это кросс-платформенный TypeScript core, который затем подключается к React Native UI и нативным VPN bridge (Network Extension / VpnService).
