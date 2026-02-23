@@ -9,7 +9,8 @@
     "lint": "tsc --noEmit",
     "check:semver": "node scripts/check-semver.mjs",
     "test:integration": "vitest run tests/integrationExtendedHttpMocks.test.ts",
-    "test:e2e": "vitest run tests/e2eFlowSimulation.test.ts"
+    "test:e2e": "vitest run tests/e2eFlowSimulation.test.ts",
+    "generate:changelog": "node scripts/generate-changelog.mjs"
   },
   "devDependencies": {
     "@types/node": "^25.3.0",
