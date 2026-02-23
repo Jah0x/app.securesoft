@@ -66,6 +66,11 @@ export class AppCoreModule {
   }
 
   async switchAccount(accountId: string): Promise<void> {
+    const vpnState = this.modules.vpn.getState();
+    if (["preparing", "connecting", "connected", "reconnecting"].includes(vpnState)) {
+      throw new Error("Cannot switch account while VPN session is active");
+    }
+
     await this.modules.auth.setActiveAccount(accountId);
     await this.modules.push.flushPendingTokens();
 

@@ -58,10 +58,12 @@ class FlakyHttpClient extends FakeHttpClient {
 class FakeConnector implements VpnConnector {
   connected = false;
   connectCalls = 0;
+  lastConfig: { tls?: { alpn?: string[] } } | null = null;
 
-  async connect(): Promise<void> {
+  async connect(config: { tls?: { alpn?: string[] } }): Promise<void> {
     this.connectCalls += 1;
     this.connected = true;
+    this.lastConfig = config;
   }
 
   async disconnect(): Promise<void> {
@@ -188,7 +190,35 @@ describe("VpnSessionModule", () => {
     expect(api.vpnCalls).toBe(3);
   });
 
-  it("планирует авто-refresh JWT и останавливает scheduler при disconnect", async () => {
+  
+
+  it("передает TLS параметры в VPN connector", async () => {
+    const store = new InMemorySecureStore();
+    const api = new FakeHttpClient();
+    const connector = new FakeConnector();
+    const auth = new AuthModule(api as never, store);
+    await auth.login("acc1", "user@example.com", "pw");
+
+    api.requestVpnToken = async () => ({
+      endpoint: {
+        address: "203.0.113.10:443",
+        hostname: "edge-12.vpn.example.com",
+        protocol: "http2",
+        dns: "1.1.1.1",
+      },
+      vpn_username: "dev_user_abc",
+      vpn_jwt: "jwt",
+      expires_at: new Date(Date.now() + 60_000).toISOString(),
+      tls: { alpn: ["h2"] },
+    });
+
+    const module = new VpnSessionModule(api as never, auth, new DeviceModule(store), connector, "android", "1.0.0");
+
+    await module.connect();
+
+    expect(connector.lastConfig?.tls?.alpn).toEqual(["h2"]);
+  });
+it("планирует авто-refresh JWT и останавливает scheduler при disconnect", async () => {
     const store = new InMemorySecureStore();
     const api = new FakeHttpClient();
     const auth = new AuthModule(api as never, store);
