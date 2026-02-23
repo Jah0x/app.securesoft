@@ -4,6 +4,7 @@ import {
   DeviceModule,
   HttpError,
   InMemorySecureStore,
+  type RefreshScheduler,
   VpnSessionModule,
   type NetworkStatusProvider,
   type VpnConnector,
@@ -74,6 +75,19 @@ class OfflineNetworkStatusProvider implements NetworkStatusProvider {
   }
 }
 
+class FakeScheduler implements RefreshScheduler {
+  scheduledDelay: number | null = null;
+  stopped = false;
+
+  schedule(_: () => Promise<void>, delayMs: number): void {
+    this.scheduledDelay = delayMs;
+  }
+
+  stop(): void {
+    this.stopped = true;
+  }
+}
+
 describe("VpnSessionModule", () => {
   it("подключает VPN и меняет состояние", async () => {
     const store = new InMemorySecureStore();
@@ -94,6 +108,7 @@ describe("VpnSessionModule", () => {
 
     expect(module.getState()).toBe("connected");
     expect(module.shouldRefreshJwt()).toBe(true);
+    expect(module.getCurrentSessionId()).toBeTruthy();
   });
 
   it("возвращает snapshot с endpoint и TTL JWT", async () => {
@@ -112,6 +127,7 @@ describe("VpnSessionModule", () => {
     expect(snapshot.endpointHostname).toBe("edge-12.vpn.example.com");
     expect(snapshot.endpointAddress).toBe("203.0.113.10:443");
     expect(snapshot.jwtExpiresInSeconds).toBeGreaterThan(0);
+    expect(snapshot.sessionId).toBeTruthy();
   });
 
   it("автообновляет JWT и применяет новую VPN-конфигурацию", async () => {
@@ -170,5 +186,30 @@ describe("VpnSessionModule", () => {
 
     expect(module.getState()).toBe("connected");
     expect(api.vpnCalls).toBe(3);
+  });
+
+  it("планирует авто-refresh JWT и останавливает scheduler при disconnect", async () => {
+    const store = new InMemorySecureStore();
+    const api = new FakeHttpClient();
+    const auth = new AuthModule(api as never, store);
+    await auth.login("acc1", "user@example.com", "pw");
+    const scheduler = new FakeScheduler();
+
+    const module = new VpnSessionModule(
+      api as never,
+      auth,
+      new DeviceModule(store),
+      new FakeConnector(),
+      "android",
+      "1.0.0",
+      undefined,
+      scheduler,
+    );
+
+    await module.connect();
+    expect(scheduler.scheduledDelay).not.toBeNull();
+
+    await module.disconnect();
+    expect(scheduler.stopped).toBe(true);
   });
 });

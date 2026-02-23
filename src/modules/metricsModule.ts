@@ -22,28 +22,42 @@ export class MetricsModule {
     this.queue.push(event);
   }
 
+  enqueueBatch(events: MetricsEvent[]): void {
+    for (const event of events) {
+      this.enqueue(event);
+    }
+  }
+
   queuedCount(): number {
     return this.queue.length;
   }
 
-  async flush(sessionId: string, maxRetries = 3): Promise<void> {
+  async flush(sessionId: string, maxRetries = 3, batchSize = 50): Promise<void> {
     if (this.queue.length === 0) {
       return;
     }
 
     const deviceId = await this.devices.getOrCreateDeviceId();
 
-    const batch: MetricsBatch = {
-      device_id: deviceId,
-      session_id: sessionId,
-      events: [...this.queue],
-    };
+    for (let offset = 0; offset < this.queue.length; offset += batchSize) {
+      const chunk = this.queue.slice(offset, offset + batchSize);
+      const batch: MetricsBatch = {
+        device_id: deviceId,
+        session_id: sessionId,
+        events: chunk,
+      };
 
+      await this.sendWithRetry(batch, maxRetries);
+    }
+
+    this.queue.length = 0;
+    this.eventIds.clear();
+  }
+
+  private async sendWithRetry(batch: MetricsBatch, maxRetries: number): Promise<void> {
     for (let attempt = 0; attempt < maxRetries; attempt += 1) {
       try {
         await this.auth.runWithAccessToken((accessToken) => this.api.postMetrics(accessToken, batch));
-        this.queue.length = 0;
-        this.eventIds.clear();
         return;
       } catch (error) {
         if (attempt === maxRetries - 1) {
