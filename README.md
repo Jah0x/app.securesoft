@@ -4,10 +4,12 @@
 
 ## Что реализовано
 
-- `AuthModule` — login/refresh/logout и выбор активного аккаунта.
-- `DeviceModule` — генерация и хранение `device_id`.
+- `AuthModule` — login/refresh/logout, OAuth login и выбор активного аккаунта.
+- `DeviceModule` — генерация/хранение `device_id`, регистрация устройства в ЛК (`/devices/register`) и хранение `device_user`.
 - `VpnSessionModule` — state machine подключения VPN, получение `/vpn/token`, reconnect и проверка TTL JWT.
 - `MetricsModule` — буферизация, дедупликация и batch-отправка метрик в `/api/v1/metrics/client` с retry/backoff.
+- `PushModule` — регистрация push token, загрузка inbox-уведомлений и отметка о прочтении.
+- `UpdateModule` — проверка версии приложения и forced-update флага.
 - `HttpClient` — typed-контракты для основных API.
 
 > Примечание: это кросс-платформенный TypeScript core, который затем подключается к React Native UI и нативным VPN bridge (Network Extension / VpnService).
@@ -15,7 +17,7 @@
 ## Структура
 
 - `src/api` — HTTP слой.
-- `src/modules` — бизнес-модули MVP.
+- `src/modules` — бизнес-модули.
 - `src/storage` — абстракция защищенного хранилища (сейчас in-memory адаптер для тестов).
 - `src/types` — контракты API и VPN state machine.
 - `tests` — unit-тесты.

@@ -20,6 +20,12 @@ export class AuthModule {
     await this.setActiveAccount(accountId);
   }
 
+  async oauthLogin(accountId: string, provider: string, code: string): Promise<void> {
+    const tokens = await this.api.oauthLogin(provider, code);
+    await this.saveTokens(accountId, tokens);
+    await this.setActiveAccount(accountId);
+  }
+
   async refreshActiveAccount(): Promise<void> {
     const accountId = this.requireActiveAccount();
     const tokens = await this.getTokens(accountId);
