@@ -80,7 +80,9 @@ export class AppCoreModule {
   async connectVpn(): Promise<string> {
     const startedAt = Date.now();
 
-    this.modules.metrics.enqueue(this.createEvent("vpn_connect_click", { source: "main_screen" }));
+    this.modules.metrics.enqueue(
+      this.createEvent("vpn_connect_click", { source: "main_screen" }, "user_action", "info"),
+    );
 
     try {
       await this.modules.vpn.connect();
@@ -94,7 +96,8 @@ export class AppCoreModule {
         this.createEvent("vpn_connect", {
           connect_ms: Date.now() - startedAt,
           state: this.modules.vpn.getState(),
-        }),
+          reconnect_gap_ms: this.modules.vpn.getReconnectStats().lastReconnectGapMs,
+        }, "connection", "info"),
       );
 
       this.modules.metrics.startPeriodicFlush(sessionId);
@@ -105,8 +108,55 @@ export class AppCoreModule {
         this.createEvent("vpn_connect_error", {
           state: this.modules.vpn.getState(),
           reason: error instanceof Error ? error.message : "unknown",
-        }),
+        }, "error", "error"),
       );
+      throw error;
+    }
+  }
+
+  async reconnectVpnWithMetrics(maxAttempts = 3, baseDelayMs = 250): Promise<string> {
+    const startedAt = Date.now();
+
+    this.modules.metrics.enqueue(this.createEvent("vpn_reconnect_attempt", {}, "connection", "warning"));
+
+    try {
+      await this.modules.vpn.reconnectWithBackoff(maxAttempts, baseDelayMs);
+
+      const sessionId = this.modules.vpn.getCurrentSessionId();
+      if (!sessionId) {
+        throw new Error("Missing VPN session id");
+      }
+
+      const reconnectStats = this.modules.vpn.getReconnectStats();
+      this.modules.metrics.enqueue(
+        this.createEvent(
+          "vpn_reconnect_success",
+          {
+            reconnect_ms: Date.now() - startedAt,
+            reconnect_gap_ms: reconnectStats.lastReconnectGapMs,
+            reconnect_total_attempts: reconnectStats.totalAttempts,
+            state: this.modules.vpn.getState(),
+          },
+          "connection",
+          "info",
+        ),
+      );
+
+      return sessionId;
+    } catch (error) {
+      this.modules.metrics.enqueue(
+        this.createEvent(
+          "vpn_reconnect_error",
+          {
+            reconnect_ms: Date.now() - startedAt,
+            state: this.modules.vpn.getState(),
+            reason: error instanceof Error ? error.message : "unknown",
+          },
+          "error",
+          "error",
+        ),
+      );
+
       throw error;
     }
   }
@@ -138,12 +188,21 @@ export class AppCoreModule {
     await this.modules.auth.logout(accountId);
   }
 
-  private createEvent(type: string, payload: Record<string, unknown>) {
+  private createEvent(
+    type: string,
+    payload: Record<string, unknown>,
+    category: "user_action" | "connection" | "error" | "security" = "connection",
+    severity: "info" | "warning" | "error" = "info",
+  ) {
     return {
       event_id: createUuid(),
       type,
       ts: new Date().toISOString(),
-      payload,
+      payload: {
+        ...payload,
+        category,
+        severity,
+      },
     };
   }
 }

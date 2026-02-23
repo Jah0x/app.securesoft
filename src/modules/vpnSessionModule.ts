@@ -31,6 +31,11 @@ export interface VpnStatusSnapshot {
   sessionId: string | null;
 }
 
+export interface VpnReconnectStats {
+  totalAttempts: number;
+  lastReconnectGapMs: number | null;
+}
+
 export interface RefreshScheduler {
   schedule(handler: () => Promise<void>, delayMs: number): void;
   stop(): void;
@@ -58,6 +63,8 @@ export class VpnSessionModule {
   private state: VpnState = "idle";
   private currentToken: VpnTokenResponse | null = null;
   private currentSessionId: string | null = null;
+  private reconnectAttemptsTotal = 0;
+  private lastReconnectGapMs: number | null = null;
 
   constructor(
     private readonly api: HttpClient,
@@ -96,6 +103,13 @@ export class VpnSessionModule {
       endpointAddress: this.currentToken.endpoint.address,
       jwtExpiresInSeconds: Math.max(0, Math.floor((expiresAt - now.getTime()) / 1000)),
       sessionId: this.currentSessionId,
+    };
+  }
+
+  getReconnectStats(): VpnReconnectStats {
+    return {
+      totalAttempts: this.reconnectAttemptsTotal,
+      lastReconnectGapMs: this.lastReconnectGapMs,
     };
   }
 
@@ -155,10 +169,15 @@ export class VpnSessionModule {
 
   async reconnectWithBackoff(maxAttempts = 3, baseDelayMs = 250): Promise<void> {
     let lastError: unknown;
+    const reconnectStartedAt = Date.now();
+    let attempts = 0;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       try {
+        attempts = attempt + 1;
         await this.reconnect();
+        this.reconnectAttemptsTotal += attempts;
+        this.lastReconnectGapMs = Date.now() - reconnectStartedAt;
         return;
       } catch (error) {
         lastError = error;
@@ -169,6 +188,9 @@ export class VpnSessionModule {
         await wait(baseDelayMs * 2 ** attempt);
       }
     }
+
+    this.reconnectAttemptsTotal += attempts;
+    this.lastReconnectGapMs = null;
 
     throw lastError;
   }
