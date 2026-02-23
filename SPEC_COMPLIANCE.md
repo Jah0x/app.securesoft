@@ -1,34 +1,30 @@
-# Соответствие репозитория требованиям `MOBILE_APPS_SPEC.md`
+# Соответствие репозитория `MOBILE_APPS_SPEC.md`
 
-Оценка сделана для текущего **TypeScript core-слоя** (без React Native UI и нативных iOS/Android VPN bridge).
+Оценка выполнена для текущего scope репозитория (TypeScript core-модули, без React Native UI и native VPN-bridge).
 
 ## Итоговая оценка
 
-- **Полностью реализовано в core:** 25/28 пунктов (**~89%**)
-- **Частично реализовано:** 2/28 пунктов
-- **Вне scope этого репозитория (требует mobile shell / native):** 1/28 пунктов
+- **Core-логика и API-контракты:** ~**90%**
+- **Полное ТЗ целиком (включая UI + iOS/Android native):** ~**60%**
 
-## Краткая матрица
+## Покрыто в репозитории
 
-### Полностью реализовано
-- AuthModule: login/refresh/logout, OAuth, multi-account.
-- Secure storage abstraction для секретов.
-- DeviceModule: UUID `device_id`, регистрация устройства, account isolation.
-- VpnSessionModule: `POST /vpn/token`, state machine, reconnect + backoff, JWT auto-refresh.
-- MetricsModule: batch send на `/api/v1/metrics/client`, retry/backoff, deduplication и периодический flush во время активной сессии.
-- PushModule: APNS/FCM token registration abstraction, pending queue, inbox + read state.
-- UpdateModule: min supported version + forced update + update available.
-- AppCoreModule: orchestration сценариев login/connect/disconnect/switch/logout.
+- `AuthModule`: login/refresh/logout, OAuth-вход, мультиаккаунт, защита от гонок refresh.
+- `DeviceModule`: генерация `device_id`, регистрация устройства, привязка `device_user` к аккаунту.
+- `VpnSessionModule`: `/vpn/token`, state machine, авто-refresh JWT, reconnect с exponential backoff, offline-проверка, error-классификация.
+- `MetricsModule`: batched отправка в `/api/v1/metrics/client`, retry/backoff, дедупликация `event_id`, периодический flush.
+- `PushModule`: регистрация APNS/FCM токена, pending/retry паттерн, inbox и mark-as-read.
+- `UpdateModule`: проверка версий и forced update.
+- `AppCoreModule`: оркестрация login/connect/disconnect/logout и межмодульных cleanup-хуков.
 
-### Частично реализовано
-- UI/UX экраны: реализованы только core-данные/сценарии, без React Native экранов.
-- RED/resource metrics: инфраструктура событий и отправки есть, но platform-level CPU/RAM/battery collectors не включены.
+## Что доработано в этой задаче
 
-### Вне scope текущего репозитория
-- Нативный VPN bridge (iOS Network Extension / Android VpnService) как production-реализация туннеля.
+- Передача optional TLS-параметров (`tls.alpn`) в VPN-коннектор, чтобы соответствовать optional TLS полям в `/vpn/token`.
+- Запрет переключения аккаунта при активной VPN-сессии, чтобы обеспечить требование «один активный аккаунт в рамках одной VPN-сессии».
 
-## Что доведено в этом коммите
+## Вне scope текущего репозитория
 
-- В `MetricsModule` добавлена поддержка периодической отправки метрик (`startPeriodicFlush` / `stopPeriodicFlush`) с изолированным scheduler-интерфейсом.
-- `AppCoreModule` теперь автоматически включает периодический flush после успешного VPN-connect и выключает его при disconnect/logout.
-- Дополнены unit-тесты `MetricsModule` проверкой периодической отправки.
+- Полноценные React Native UI-экраны (Auth/Main/Status/Notifications/Accounts).
+- iOS Network Extension + Android VpnService (native tunnel implementation).
+- Реальные платформенные сборщики CPU/RAM/Disk/energy (только transport/очередь метрик на уровне core).
+- TLS pinning и platform-secure storage реализации ОС (в репозитории — абстракции и in-memory реализация для тестов).

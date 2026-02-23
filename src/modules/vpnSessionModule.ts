@@ -12,6 +12,9 @@ export interface VpnConnector {
     username: string;
     password: string;
     dns: string;
+    tls?: {
+      alpn?: string[];
+    };
   }): Promise<void>;
   disconnect(): Promise<void>;
 }
@@ -211,6 +214,7 @@ export class VpnSessionModule {
       dns: token.endpoint.dns,
       username: token.vpn_username,
       password: token.vpn_jwt,
+      tls: token.tls,
     });
   }
 

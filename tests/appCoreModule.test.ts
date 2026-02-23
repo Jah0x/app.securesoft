@@ -159,7 +159,23 @@ describe("AppCoreModule", () => {
     expect(await devices.getDeviceUser("acc1")).toBeNull();
   });
 
-  it("при переключении аккаунта отправляет отложенный push token нужного аккаунта", async () => {
+  
+
+  it("запрещает переключение аккаунта во время активной VPN-сессии", async () => {
+    const { app, auth } = await setup();
+
+    await app.loginAndPrepare({
+      accountId: "acc1",
+      email: "user1@example.com",
+      password: "pw",
+    });
+
+    await auth.login("acc2", "user2@example.com", "pw");
+    await app.connectVpn();
+
+    await expect(app.switchAccount("acc2")).rejects.toThrow("Cannot switch account while VPN session is active");
+  });
+it("при переключении аккаунта отправляет отложенный push token нужного аккаунта", async () => {
     const { app, auth, devices, push, api } = await setup();
 
     await app.loginAndPrepare({
