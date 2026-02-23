@@ -22,6 +22,10 @@ class FakeHttpClient {
     return { accessToken: "access-2", refreshToken: "refresh-2" };
   }
 
+  async oauthLogin() {
+    return { accessToken: "access-oauth", refreshToken: "refresh-oauth" };
+  }
+
   async registerDevice() {
     return { device_user: "device-user-1" };
   }
@@ -78,6 +82,37 @@ const setup = async () => {
 };
 
 describe("AppCoreModule", () => {
+
+  it("поддерживает OAuth login через core orchestration", async () => {
+    const { app } = await setup();
+
+    const prepared = await app.loginWithOAuthAndPrepare({
+      accountId: "acc-oauth",
+      provider: "google",
+      code: "oauth-code",
+    });
+
+    expect(prepared.accountId).toBe("acc-oauth");
+    expect(prepared.deviceId).toBeTruthy();
+    expect(prepared.deviceUser).toBe("device-user-1");
+  });
+
+  it("очищает очередь метрик при logout", async () => {
+    const { app, metrics } = await setup();
+
+    await app.loginAndPrepare({
+      accountId: "acc1",
+      email: "user@example.com",
+      password: "pw",
+    });
+
+    expect(metrics.queuedCount()).toBeGreaterThan(0);
+
+    await app.logoutActiveAccount();
+
+    expect(metrics.queuedCount()).toBe(0);
+  });
+
   it("выполняет полный happy-path: login -> connect -> disconnect -> flush", async () => {
     const { app, metrics, api, connector } = await setup();
 
