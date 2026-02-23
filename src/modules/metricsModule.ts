@@ -31,7 +31,6 @@ export class MetricsModule {
       return;
     }
 
-    const accessToken = await this.auth.getActiveAccessToken();
     const deviceId = await this.devices.getOrCreateDeviceId();
 
     const batch: MetricsBatch = {
@@ -42,7 +41,7 @@ export class MetricsModule {
 
     for (let attempt = 0; attempt < maxRetries; attempt += 1) {
       try {
-        await this.api.postMetrics(accessToken, batch);
+        await this.auth.runWithAccessToken((accessToken) => this.api.postMetrics(accessToken, batch));
         this.queue.length = 0;
         this.eventIds.clear();
         return;

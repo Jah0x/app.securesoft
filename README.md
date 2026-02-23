@@ -4,9 +4,9 @@
 
 ## Что реализовано
 
-- `AuthModule` — login/refresh/logout, OAuth login и выбор активного аккаунта.
+- `AuthModule` — login/refresh/logout, OAuth login, выбор активного аккаунта и anti-race защита при refresh после 401.
 - `DeviceModule` — генерация/хранение `device_id`, регистрация устройства в ЛК (`/devices/register`) и хранение `device_user`.
-- `VpnSessionModule` — state machine подключения VPN, получение `/vpn/token`, reconnect и проверка TTL JWT.
+- `VpnSessionModule` — state machine подключения VPN, получение `/vpn/token`, offline-проверка, reconnect с exponential backoff и проверка TTL JWT.
 - `MetricsModule` — буферизация, дедупликация и batch-отправка метрик в `/api/v1/metrics/client` с retry/backoff.
 - `PushModule` — регистрация push token, загрузка inbox-уведомлений и отметка о прочтении.
 - `UpdateModule` — проверка версии приложения и forced-update флага.

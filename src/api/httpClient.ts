@@ -15,6 +15,15 @@ export interface HttpClientConfig {
   fetchImpl?: typeof fetch;
 }
 
+export class HttpError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly path: string,
+  ) {
+    super(`HTTP ${status} for ${path}`);
+  }
+}
+
 export class HttpClient {
   private readonly baseUrl: string;
   private readonly fetchImpl: typeof fetch;
@@ -75,7 +84,7 @@ export class HttpClient {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status} for ${path}`);
+      throw new HttpError(response.status, path);
     }
 
     return (await response.json()) as T;
@@ -90,7 +99,7 @@ export class HttpClient {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status} for ${path}`);
+      throw new HttpError(response.status, path);
     }
 
     return (await response.json()) as T;

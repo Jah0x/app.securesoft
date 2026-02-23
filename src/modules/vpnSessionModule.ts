@@ -1,4 +1,4 @@
-import { HttpClient } from "../api/httpClient.js";
+import { HttpClient, HttpError } from "../api/httpClient.js";
 import { AuthModule } from "./authModule.js";
 import { DeviceModule } from "./deviceModule.js";
 import type { Platform, VpnState, VpnTokenResponse } from "../types/contracts.js";
@@ -15,6 +15,10 @@ export interface VpnConnector {
   disconnect(): Promise<void>;
 }
 
+export interface NetworkStatusProvider {
+  isOnline(): Promise<boolean>;
+}
+
 export class VpnSessionModule {
   private state: VpnState = "idle";
   private currentToken: VpnTokenResponse | null = null;
@@ -26,6 +30,7 @@ export class VpnSessionModule {
     private readonly connector: VpnConnector,
     private readonly platform: Platform,
     private readonly appVersion: string,
+    private readonly networkStatus?: NetworkStatusProvider,
   ) {}
 
   getState(): VpnState {
@@ -36,15 +41,20 @@ export class VpnSessionModule {
     this.state = "preparing";
 
     try {
-      const accessToken = await this.auth.getActiveAccessToken();
+      if (this.networkStatus && !(await this.networkStatus.isOnline())) {
+        throw new Error("OFFLINE");
+      }
+
       const deviceId = await this.devices.getOrCreateDeviceId();
 
       this.state = "connecting";
-      const token = await this.api.requestVpnToken(accessToken, {
-        device_id: deviceId,
-        platform: this.platform,
-        app_version: this.appVersion,
-      });
+      const token = await this.auth.runWithAccessToken((accessToken) =>
+        this.api.requestVpnToken(accessToken, {
+          device_id: deviceId,
+          platform: this.platform,
+          app_version: this.appVersion,
+        }),
+      );
       this.currentToken = token;
 
       await this.connector.connect({
@@ -85,19 +95,40 @@ export class VpnSessionModule {
     await this.connect();
   }
 
-  private classifyError(error: unknown): VpnState {
-    if (!(error instanceof Error)) {
-      return "error_network";
+  async reconnectWithBackoff(maxAttempts = 3, baseDelayMs = 250): Promise<void> {
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      try {
+        await this.reconnect();
+        return;
+      } catch (error) {
+        lastError = error;
+        if (attempt === maxAttempts - 1) {
+          break;
+        }
+
+        await wait(baseDelayMs * 2 ** attempt);
+      }
     }
 
-    if (error.message.includes("HTTP 401")) {
+    throw lastError;
+  }
+
+  private classifyError(error: unknown): VpnState {
+    if (error instanceof HttpError && error.status === 401) {
       return "error_auth";
     }
 
-    if (error.message.includes("HTTP 402") || error.message.includes("HTTP 403")) {
+    if (error instanceof HttpError && (error.status === 402 || error.status === 403)) {
       return "error_subscription";
     }
 
     return "error_network";
   }
 }
+
+const wait = async (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
