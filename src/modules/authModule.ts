@@ -1,4 +1,4 @@
-import { HttpClient } from "../api/httpClient.js";
+import { HttpClient, HttpError } from "../api/httpClient.js";
 import type { SecureStore } from "../storage/secureStore.js";
 
 interface AccountTokens {
@@ -8,6 +8,7 @@ interface AccountTokens {
 
 export class AuthModule {
   private activeAccountId: string | null = null;
+  private refreshInFlight: Promise<void> | null = null;
 
   constructor(
     private readonly api: HttpClient,
@@ -27,6 +28,39 @@ export class AuthModule {
   }
 
   async refreshActiveAccount(): Promise<void> {
+    await this.refreshActiveAccountSafe();
+  }
+
+  async refreshActiveAccountSafe(): Promise<void> {
+    if (this.refreshInFlight) {
+      await this.refreshInFlight;
+      return;
+    }
+
+    this.refreshInFlight = this.doRefreshActiveAccount();
+    try {
+      await this.refreshInFlight;
+    } finally {
+      this.refreshInFlight = null;
+    }
+  }
+
+  async runWithAccessToken<T>(operation: (accessToken: string) => Promise<T>): Promise<T> {
+    const token = await this.getActiveAccessToken();
+    try {
+      return await operation(token);
+    } catch (error) {
+      if (!(error instanceof HttpError) || error.status !== 401) {
+        throw error;
+      }
+
+      await this.refreshActiveAccountSafe();
+      const refreshed = await this.getActiveAccessToken();
+      return operation(refreshed);
+    }
+  }
+
+  private async doRefreshActiveAccount(): Promise<void> {
     const accountId = this.requireActiveAccount();
     const tokens = await this.getTokens(accountId);
     const next = await this.api.refresh(tokens.refreshToken);

@@ -11,24 +11,23 @@ export class PushModule {
   ) {}
 
   async registerToken(accountId: string, provider: PushProvider, token: string): Promise<void> {
-    const accessToken = await this.auth.getActiveAccessToken();
     const deviceId = await this.devices.getOrCreateDeviceId();
 
-    await this.api.registerPushToken(accessToken, {
-      device_id: deviceId,
-      account_id: accountId,
-      provider,
-      token,
-    });
+    await this.auth.runWithAccessToken((accessToken) =>
+      this.api.registerPushToken(accessToken, {
+        device_id: deviceId,
+        account_id: accountId,
+        provider,
+        token,
+      }),
+    );
   }
 
   async listInbox(): Promise<PushNotification[]> {
-    const accessToken = await this.auth.getActiveAccessToken();
-    return this.api.listNotifications(accessToken);
+    return this.auth.runWithAccessToken((accessToken) => this.api.listNotifications(accessToken));
   }
 
   async markAsRead(notificationId: string): Promise<void> {
-    const accessToken = await this.auth.getActiveAccessToken();
-    await this.api.markNotificationRead(accessToken, notificationId);
+    await this.auth.runWithAccessToken((accessToken) => this.api.markNotificationRead(accessToken, notificationId));
   }
 }
