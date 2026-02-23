@@ -32,6 +32,11 @@ export class MetricsModule {
     return this.queue.length;
   }
 
+  clearQueue(): void {
+    this.queue.length = 0;
+    this.eventIds.clear();
+  }
+
   async flush(sessionId: string, maxRetries = 3, batchSize = 50): Promise<void> {
     if (this.queue.length === 0) {
       return;
@@ -50,8 +55,7 @@ export class MetricsModule {
       await this.sendWithRetry(batch, maxRetries);
     }
 
-    this.queue.length = 0;
-    this.eventIds.clear();
+    this.clearQueue();
   }
 
   private async sendWithRetry(batch: MetricsBatch, maxRetries: number): Promise<void> {

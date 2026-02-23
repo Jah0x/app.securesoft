@@ -31,7 +31,23 @@ export class AppCoreModule {
     const { accountId, email, password } = params;
 
     await this.modules.auth.login(accountId, email, password);
+    return this.finishAccountPreparation(accountId);
+  }
 
+  async loginWithOAuthAndPrepare(params: {
+    accountId: string;
+    provider: string;
+    code: string;
+  }): Promise<{ accountId: string; deviceId: string; deviceUser: string }> {
+    const { accountId, provider, code } = params;
+
+    await this.modules.auth.oauthLogin(accountId, provider, code);
+    return this.finishAccountPreparation(accountId);
+  }
+
+  private async finishAccountPreparation(
+    accountId: string,
+  ): Promise<{ accountId: string; deviceId: string; deviceUser: string }> {
     const accessToken = await this.modules.auth.getActiveAccessToken();
     const [deviceId, deviceUser] = await Promise.all([
       this.modules.devices.getOrCreateDeviceId(),
@@ -108,6 +124,7 @@ export class AppCoreModule {
 
     await this.modules.vpn.disconnect();
     this.modules.metrics.enqueue(this.createEvent("user_logout", { account_id: accountId }));
+    this.modules.metrics.clearQueue();
 
     await this.modules.auth.logout(accountId);
   }
