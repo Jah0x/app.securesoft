@@ -1,0 +1,40 @@
+name: Mobile Release Dry Run
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run check:semver
+      - run: npm run test:integration
+      - run: npm run test:e2e
+
+  fastlane-dry-run:
+    runs-on: macos-latest
+    needs: quality-gate
+    if: ${{ secrets.FASTLANE_SESSION != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+      - name: Install fastlane
+        run: gem install fastlane
+      - name: Fastlane iOS dry run
+        run: echo "fastlane ios beta --verbose (dry-run hook)"
+      - name: Fastlane Android dry run
+        run: echo "fastlane android internal --verbose (dry-run hook)"

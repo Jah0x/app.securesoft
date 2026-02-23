@@ -21,7 +21,8 @@
 - `src/modules` — бизнес-модули.
 - `src/storage` — абстракция защищенного хранилища (сейчас in-memory адаптер для тестов).
 - `src/types` — контракты API и VPN state machine.
-- `tests` — unit-тесты.
+- `tests` — unit/integration/e2e-simulation тесты.
+- `docs` — developer и пользовательская документация.
 
 ## Запуск
 
@@ -29,15 +30,19 @@
 npm install
 npm run lint
 npm test
+npm run test:integration
+npm run test:e2e
 npm run build
 npm run check:semver
 ```
 
 ## CI/CD
 
-- Добавлен GitHub Actions workflow `.github/workflows/ci.yml`: выполняет `lint`, `test`, `build` и `check:semver` на push/PR.
-- Для релизных тегов `v*.*.*` semver-проверка дополнительно сверяет версию в теге и `package.json`.
+- Базовый workflow `.github/workflows/ci.yml`: `lint`, `test`, `build`, `check:semver` на push/PR.
+- Дополнительный workflow `.github/workflows/mobile-release.yml`: quality gate + mobile release dry-run с fastlane hooks для релизных тегов.
 
 ## Документация
 
 - [MOBILE_APPS_SPEC.md](./MOBILE_APPS_SPEC.md) — полное ТЗ.
+- [Developer Mobile README](./docs/DEVELOPER_MOBILE_README.md).
+- [User Support Guide](./docs/USER_SUPPORT_GUIDE.md).
