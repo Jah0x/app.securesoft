@@ -51,8 +51,8 @@
 
 - Integration‑тесты с расширенными HTTP‑моками для сквозных сценариев по новому UI/native.
 - E2E‑тесты (Detox/Appium) для сценария логин → токен → подключение → reconnect → logout.
-- GitHub Actions workflow для lint/test/build Android/iOS, fastlane и публикации TestFlight/Play Internal.
-- Автопроверка semver перед релизом.
+- GitHub Actions workflow для lint/test/build Android/iOS, fastlane и публикации TestFlight/Play Internal *(частично: в текущем TS-core добавлен CI для lint/test/build)*.
+- Автопроверка semver перед релизом *(реализовано для проверки `package.json` и релизных тегов)*.
 
 ## 8) Документация и support
 
