@@ -15,3 +15,5 @@ export * from "./modules/i18nModule.js";
 export * from "./modules/experienceModule.js";
 export * from "./modules/billingModule.js";
 export * from "./modules/splitTunnelModule.js";
+export * from "./modules/securityModule.js";
+export * from "./modules/supportModule.js";

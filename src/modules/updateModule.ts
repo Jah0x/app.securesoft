@@ -1,5 +1,5 @@
 import { HttpClient } from "../api/httpClient.js";
-import type { AppVersionInfo, Platform } from "../types/contracts.js";
+import type { AppVersionInfo, Platform, VpnTokenResponse } from "../types/contracts.js";
 
 export type UpdateMode = "none" | "soft" | "blocking";
 
@@ -33,6 +33,24 @@ export class UpdateModule {
   async isUpdateAvailable(): Promise<boolean> {
     const versionInfo = await this.checkVersion();
     return compareSemver(this.appVersion, versionInfo.latest_version) < 0;
+  }
+
+  getPolicyFromVpnToken(token: VpnTokenResponse): UpdatePolicy {
+    if (!token.update?.forced) {
+      return {
+        mode: "none",
+        latestVersion: token.update?.latest_version ?? this.appVersion,
+        minimumSupportedVersion: token.update?.min_supported_version ?? this.appVersion,
+        redirectUrl: null,
+      };
+    }
+
+    return {
+      mode: "blocking",
+      latestVersion: token.update.latest_version ?? this.appVersion,
+      minimumSupportedVersion: token.update.min_supported_version ?? this.appVersion,
+      redirectUrl: token.update.store_url ?? null,
+    };
   }
 
   async getUpdatePolicy(storeUrls: { ios: string; android: string }): Promise<UpdatePolicy> {
