@@ -30,7 +30,7 @@ class FakeHttpClient {
         dns: "1.1.1.1",
       },
       vpn_username: "dev_user_abc",
-      vpn_jwt: "jwt",
+      vpn_jwt: `jwt-${this.vpnCalls}`,
       expires_at: new Date(Date.now() + 60_000).toISOString(),
     };
   }
@@ -56,8 +56,10 @@ class FlakyHttpClient extends FakeHttpClient {
 
 class FakeConnector implements VpnConnector {
   connected = false;
+  connectCalls = 0;
 
   async connect(): Promise<void> {
+    this.connectCalls += 1;
     this.connected = true;
   }
 
@@ -92,6 +94,41 @@ describe("VpnSessionModule", () => {
 
     expect(module.getState()).toBe("connected");
     expect(module.shouldRefreshJwt()).toBe(true);
+  });
+
+  it("возвращает snapshot с endpoint и TTL JWT", async () => {
+    const store = new InMemorySecureStore();
+    const api = new FakeHttpClient();
+    const connector = new FakeConnector();
+    const auth = new AuthModule(api as never, store);
+    await auth.login("acc1", "user@example.com", "pw");
+
+    const module = new VpnSessionModule(api as never, auth, new DeviceModule(store), connector, "android", "1.0.0");
+
+    await module.connect();
+    const snapshot = module.getStatusSnapshot();
+
+    expect(snapshot.state).toBe("connected");
+    expect(snapshot.endpointHostname).toBe("edge-12.vpn.example.com");
+    expect(snapshot.endpointAddress).toBe("203.0.113.10:443");
+    expect(snapshot.jwtExpiresInSeconds).toBeGreaterThan(0);
+  });
+
+  it("автообновляет JWT и применяет новую VPN-конфигурацию", async () => {
+    const store = new InMemorySecureStore();
+    const api = new FakeHttpClient();
+    const connector = new FakeConnector();
+    const auth = new AuthModule(api as never, store);
+    await auth.login("acc1", "user@example.com", "pw");
+
+    const module = new VpnSessionModule(api as never, auth, new DeviceModule(store), connector, "android", "1.0.0");
+
+    await module.connect();
+    const refreshed = await module.refreshJwtIfNeeded();
+
+    expect(refreshed).toBe(true);
+    expect(api.vpnCalls).toBe(2);
+    expect(connector.connectCalls).toBe(2);
   });
 
   it("помечает offline как network error", async () => {
