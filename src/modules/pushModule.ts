@@ -9,6 +9,15 @@ interface PendingPushToken {
   token: string;
 }
 
+export interface PushPermissionAdapter {
+  requestPermission(): Promise<boolean>;
+}
+
+export interface PushRuntimeAdapter {
+  onForegroundMessage(handler: (notification: PushNotification) => Promise<void>): void;
+  onBackgroundMessage(handler: (notification: PushNotification) => Promise<void>): void;
+}
+
 export class PushModule {
   private static readonly INBOX_KEY_PREFIX = "push:inbox";
   private static readonly TOKEN_KEY_PREFIX = "push:token";
@@ -19,6 +28,8 @@ export class PushModule {
     private readonly auth: AuthModule,
     private readonly devices: DeviceModule,
     private readonly secureStore?: SecureStore,
+    private readonly permissions?: PushPermissionAdapter,
+    private readonly runtime?: PushRuntimeAdapter,
   ) {}
 
   async registerToken(provider: PushProvider, token: string): Promise<void> {
@@ -51,6 +62,29 @@ export class PushModule {
 
     const accountId = this.requireAccountId();
     return this.secureStore.get(this.pushTokenKey(accountId, provider));
+  }
+
+
+  async requestPermission(): Promise<boolean> {
+    if (!this.permissions) {
+      return true;
+    }
+
+    return this.permissions.requestPermission();
+  }
+
+  enableRuntimeHandling(): void {
+    if (!this.runtime) {
+      return;
+    }
+
+    this.runtime.onForegroundMessage(async (notification) => {
+      await this.upsertInboxNotification(notification);
+    });
+
+    this.runtime.onBackgroundMessage(async (notification) => {
+      await this.upsertInboxNotification(notification);
+    });
   }
 
   async clearAccountData(accountId: string): Promise<void> {
@@ -175,6 +209,14 @@ export class PushModule {
     const pending = await this.getPendingTokens(accountId);
     const filtered = pending.filter((item) => item.provider !== provider);
     await this.secureStore.set(this.pendingTokensKey(accountId), JSON.stringify(filtered));
+  }
+
+
+  private async upsertInboxNotification(notification: PushNotification): Promise<void> {
+    const cached = await this.getCachedInbox();
+    const withoutSameId = cached.filter((item) => item.id !== notification.id);
+    withoutSameId.unshift(notification);
+    await this.saveInbox(withoutSameId);
   }
 
   private async saveInbox(inbox: PushNotification[]): Promise<void> {

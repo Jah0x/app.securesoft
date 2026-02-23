@@ -4,6 +4,7 @@ import type { DeviceModule } from "./deviceModule.js";
 import type { MetricsModule } from "./metricsModule.js";
 import type { PushModule } from "./pushModule.js";
 import type { VpnSessionModule } from "./vpnSessionModule.js";
+import type { OfflineActionQueue } from "./resilienceModule.js";
 
 export interface AppCoreModules {
   auth: AuthModule;
@@ -11,6 +12,7 @@ export interface AppCoreModules {
   vpn: VpnSessionModule;
   metrics: MetricsModule;
   push: PushModule;
+  offlineQueue?: OfflineActionQueue;
 }
 
 export class AppCoreModule {
@@ -86,6 +88,7 @@ export class AppCoreModule {
 
     try {
       await this.modules.vpn.connect();
+      await this.modules.offlineQueue?.flush(async () => undefined);
 
       const sessionId = this.modules.vpn.getCurrentSessionId();
       if (!sessionId) {
@@ -104,6 +107,12 @@ export class AppCoreModule {
 
       return sessionId;
     } catch (error) {
+      await this.modules.offlineQueue?.enqueue({
+        id: createUuid(),
+        type: "vpn_connect_click",
+        payload: { source: "main_screen" },
+        createdAt: new Date().toISOString(),
+      });
       this.modules.metrics.enqueue(
         this.createEvent("vpn_connect_error", {
           state: this.modules.vpn.getState(),
@@ -144,6 +153,12 @@ export class AppCoreModule {
 
       return sessionId;
     } catch (error) {
+      await this.modules.offlineQueue?.enqueue({
+        id: createUuid(),
+        type: "vpn_connect_click",
+        payload: { source: "main_screen" },
+        createdAt: new Date().toISOString(),
+      });
       this.modules.metrics.enqueue(
         this.createEvent(
           "vpn_reconnect_error",
