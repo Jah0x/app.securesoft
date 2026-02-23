@@ -1,4 +1,4 @@
-name: Mobile Release Dry Run
+name: Mobile Release
 
 on:
   workflow_dispatch:
@@ -24,10 +24,17 @@ jobs:
       - run: npm run test:integration
       - run: npm run test:e2e
 
-  fastlane-dry-run:
+  publish-mobile:
     runs-on: macos-latest
     needs: quality-gate
     if: ${{ secrets.FASTLANE_SESSION != '' }}
+    env:
+      FASTLANE_SESSION: ${{ secrets.FASTLANE_SESSION }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+      GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+      ANDROID_PACKAGE_NAME: ${{ secrets.ANDROID_PACKAGE_NAME }}
     steps:
       - uses: actions/checkout@v4
       - uses: ruby/setup-ruby@v1
@@ -35,7 +42,7 @@ jobs:
           ruby-version: "3.2"
       - name: Install fastlane
         run: gem install fastlane
-      - name: Fastlane iOS dry run
-        run: echo "fastlane ios beta --verbose (dry-run hook)"
-      - name: Fastlane Android dry run
-        run: echo "fastlane android internal --verbose (dry-run hook)"
+      - name: Publish iOS to TestFlight
+        run: fastlane ios beta
+      - name: Publish Android to Internal
+        run: fastlane android internal
