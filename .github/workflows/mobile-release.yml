@@ -20,6 +20,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run check:semver
+      - run: npm run generate:changelog
       - run: npm run test:integration
       - run: npm run test:e2e
 

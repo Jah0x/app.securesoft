@@ -36,3 +36,6 @@ jobs:
 
       - name: Semver validation
         run: npm run check:semver
+
+      - name: Generate changelog
+        run: npm run generate:changelog
