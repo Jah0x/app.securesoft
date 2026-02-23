@@ -149,3 +149,35 @@ Split‑tunneling: предусмотреть настройку для искл
 Quick‑connect widget: добавить виджет или ярлык для быстрого подключения/отключения VPN прямо с главного экрана.
 
 Accessibility: обеспечить полную поддержку скрин‑ридеров, контрастных цветов и масштабируемого текста.
+
+---
+
+## Статус выполнения пунктов 5–8
+
+### 5. Функциональные улучшения и безопасность (P1)
+- ✅ UpdateModule: UI policy для soft/blocking update и redirect в Store.
+- ✅ UpdateModule: обработка обязательного обновления по флагу из `/vpn/token`.
+- ✅ Локализация EN/RU и переключение языка.
+- ✅ Тёмная тема + accessibility-настройки (контраст, dynamic type, VoiceOver/TalkBack flags).
+- ✅ Security: TLS pinning-проверка хеша сертификата.
+- ✅ Security: очистка чувствительных данных при logout/cleanup.
+- ✅ Security: детекция emulator/root/jailbreak.
+
+### 6. Тестирование и CI/CD (P1)
+- ✅ Integration tests с HTTP-моками и покрытием ключевого сквозного сценария.
+- ~ E2E tests: реализована e2e flow simulation тестами core (Detox/Appium на реальных устройствах не подключены).
+- ~ CI/CD GitHub Actions: lint/unit/build/integration/e2e + release dry-run; публикация в TestFlight/Google Play Internal пока в виде fastlane hook/dry-run.
+- ~ fastlane интеграция: dry-run шаги и инфраструктурные условия в workflow; полноценные lane + подпись/загрузка требуют секретов и мобильного репозитория.
+- ✅ Автопроверка semver.
+- ❌ Автогенерация changelog (не реализовано).
+
+### 7. Документация и поддержка (P1)
+- ✅ Developer README.
+- ✅ User Guide/FAQ/Recovery.
+- ✅ Support и обратная связь: модуль отправки тикетов + локальная история.
+
+### 8. Дополнительные улучшения (P2)
+- ✅ In-app purchase: core-модуль подписки и статусов trial/renew/cancel/expired.
+- ✅ Split-tunneling: include/exclude правила маршрутизации.
+- ✅ Quick-connect widget/shortcut: quick action intents в experience-модуле.
+- ✅ Accessibility: high contrast + scalable text + screen-reader flags.

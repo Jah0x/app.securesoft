@@ -47,6 +47,12 @@ export interface VpnTokenResponse {
   vpn_username: string;
   vpn_jwt: string;
   expires_at: string;
+  update?: {
+    forced: boolean;
+    min_supported_version?: string;
+    latest_version?: string;
+    store_url?: string;
+  };
   tls?: {
     alpn?: string[];
   };
