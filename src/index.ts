@@ -11,3 +11,7 @@ export * from "./modules/appCoreModule.js";
 export * from "./modules/resilienceModule.js";
 export * from "./native/vpnBridge.js";
 export * from "./ui/coreMvp.js";
+export * from "./modules/i18nModule.js";
+export * from "./modules/experienceModule.js";
+export * from "./modules/billingModule.js";
+export * from "./modules/splitTunnelModule.js";

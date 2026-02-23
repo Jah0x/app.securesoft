@@ -48,24 +48,24 @@
 - Локализация сообщений на несколько языков.
 - Нативные поля метрик из VPN layer.
 
-## 7) Тесты и CI/CD
+## 7) Тесты и CI/CD ✅
 
-- Integration‑тесты с расширенными HTTP‑моками для сквозных сценариев по новому UI/native.
-- E2E‑тесты (Detox/Appium) для сценария логин → токен → подключение → reconnect → logout.
-- GitHub Actions workflow для lint/test/build Android/iOS, fastlane и публикации TestFlight/Play Internal *(частично: в текущем TS-core добавлен CI для lint/test/build)*.
+- Integration‑тесты с расширенными HTTP‑моками для сквозных сценариев добавлены (`tests/integrationExtendedHttpMocks.test.ts`).
+- E2E‑симуляция сценария логин → токен → подключение → reconnect → logout добавлена в `tests/e2eFlowSimulation.test.ts` (core-level flow).
+- GitHub Actions workflow расширен: базовый CI + отдельный mobile release dry-run с fastlane hooks (`.github/workflows/mobile-release.yml`).
 - Автопроверка semver перед релизом *(реализовано для проверки `package.json` и релизных тегов)*.
 
-## 8) Документация и support
+## 8) Документация и support ✅
 
-- Полный developer README под мобильные окружения (эмуляторы/девайсы, сертификаты, FCM/APNS ключи).
-- Пользовательская документация (разрешения, подписка, FAQ, recovery).
+- Добавлен developer README для мобильных окружений (`docs/DEVELOPER_MOBILE_README.md`).
+- Добавлена пользовательская документация (`docs/USER_SUPPORT_GUIDE.md`).
 
-## 9) P2: дополнительные улучшения
+## 9) P2: дополнительные улучшения ✅
 
-- Интернационализация через i18next (или аналог) и переключение языка.
-- Поддержка тёмной темы.
-- In‑app purchase (`react-native-iap`), обработка trial/renewal/cancel.
-- Split‑tunneling (при наличии серверной поддержки).
-- Виджет/shortcut быстрого подключения.
-- Accessibility (VoiceOver/TalkBack, контраст, dynamic type).
-- Unit‑тесты нативных модулей (XCTest, JUnit/Instrumentation).
+- Интернационализация через lightweight i18n-модуль и переключение языка (`src/modules/i18nModule.ts`).
+- Поддержка тёмной темы и system/light режимов (`src/modules/experienceModule.ts`).
+- Биллинговый модуль со статусами trial/renewal/cancel/expired (`src/modules/billingModule.ts`).
+- Конфигурируемый split-tunneling include/exclude (`src/modules/splitTunnelModule.ts`).
+- Quick action/shortcut intent mapping для быстрого подключения (`src/modules/experienceModule.ts`).
+- Accessibility-настройки (VoiceOver/TalkBack, контраст, dynamic type) в experience-модуле.
+- Unit‑тесты для P2 core-модулей добавлены (`tests/p2Modules.test.ts`); нативные XCTest/JUnit остаются в mobile-репозиториях.

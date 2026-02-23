@@ -7,7 +7,9 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "lint": "tsc --noEmit",
-    "check:semver": "node scripts/check-semver.mjs"
+    "check:semver": "node scripts/check-semver.mjs",
+    "test:integration": "vitest run tests/integrationExtendedHttpMocks.test.ts",
+    "test:e2e": "vitest run tests/e2eFlowSimulation.test.ts"
   },
   "devDependencies": {
     "@types/node": "^25.3.0",
