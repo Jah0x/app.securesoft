@@ -45,14 +45,18 @@ describe("PushModule", () => {
     const auth = new AuthModule(api as never, store);
     await auth.login("acc1", "user@example.com", "pw");
 
-    const push = new PushModule(api as never, auth, new DeviceModule(store));
+    const push = new PushModule(api as never, auth, new DeviceModule(store), store);
 
     await push.registerToken("acc1", "fcm", "fcm-token");
     const inbox = await push.listInbox();
+    expect(await push.getCachedInbox()).toEqual(inbox);
+
     await push.markAsRead("n1");
+    const cached = await push.getCachedInbox();
 
     expect((api.registerPayload as { provider: string }).provider).toBe("fcm");
     expect(inbox).toHaveLength(1);
     expect(api.readIds).toEqual(["n1"]);
+    expect(cached[0]?.is_read).toBe(true);
   });
 });
