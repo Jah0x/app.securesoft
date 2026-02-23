@@ -12,6 +12,7 @@ import type {
   RegisterRequest,
   VpnTokenRequest,
   VpnTokenResponse,
+  VpnPublicKeyResponse,
 } from "../types/contracts.js";
 
 export interface HttpClientConfig {
@@ -79,6 +80,10 @@ export class HttpClient {
 
   async requestVpnToken(accessToken: string, payload: VpnTokenRequest): Promise<VpnTokenResponse> {
     return this.post<VpnTokenResponse>("/vpn/token", payload, accessToken);
+  }
+
+  async getVpnPublicKey(accessToken: string): Promise<VpnPublicKeyResponse> {
+    return this.get<VpnPublicKeyResponse>("/api/v1/vpn/public-key", accessToken);
   }
 
   async postMetrics(accessToken: string, batch: MetricsBatch): Promise<MetricsResponse> {

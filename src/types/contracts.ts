@@ -52,6 +52,12 @@ export interface VpnTokenResponse {
   };
 }
 
+export interface VpnPublicKeyResponse {
+  public_key: string;
+  algorithm?: string;
+  key_id?: string;
+}
+
 export interface MetricsEvent {
   event_id: string;
   type: string;

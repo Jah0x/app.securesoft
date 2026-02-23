@@ -5,7 +5,9 @@ import {
   IosKeychainSecureStore,
   buildMainVpnViewState,
   buildNotificationsViewState,
+  buildUpdateModalViewState,
   createReactNativeVpnBridge,
+  mapVpnStateToUiState,
 } from "../src/index.js";
 
 describe("new features for TODO items 1-3", () => {
@@ -72,6 +74,9 @@ describe("new features for TODO items 1-3", () => {
 
     expect(main.jwtTtlProgressPercent).toBe(75);
     expect(notifications.unreadCount).toBe(1);
+    expect(mapVpnStateToUiState("reconnecting")).toBe("Reconnecting");
+    expect(mapVpnStateToUiState("error_network")).toBe("Error");
+    expect(buildUpdateModalViewState(true, true)).toEqual({ shouldShow: true, mode: "force" });
   });
 
   it("вызывает новые API endpoints", async () => {
@@ -93,6 +98,7 @@ describe("new features for TODO items 1-3", () => {
     await client.listAccounts("token");
     await client.switchAccount("token", "acc1");
     await client.deleteAccount("token", "acc1");
+    await client.getVpnPublicKey("token");
 
     expect(seen).toEqual([
       { method: "POST", url: "https://api.example.com/auth/register" },
@@ -101,6 +107,7 @@ describe("new features for TODO items 1-3", () => {
       { method: "GET", url: "https://api.example.com/accounts" },
       { method: "POST", url: "https://api.example.com/accounts/switch" },
       { method: "DELETE", url: "https://api.example.com/accounts/acc1" },
+      { method: "GET", url: "https://api.example.com/api/v1/vpn/public-key" },
     ]);
   });
 });

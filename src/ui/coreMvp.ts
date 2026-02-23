@@ -35,6 +35,44 @@ export interface NotificationsViewState {
   unreadCount: number;
 }
 
+export type ConnectionUiState = "Idle" | "Authenticating" | "Connected" | "Reconnecting" | "Error";
+
+export interface UpdateModalViewState {
+  shouldShow: boolean;
+  mode: "force" | "soft";
+}
+
+export const mapVpnStateToUiState = (state: VpnState): ConnectionUiState => {
+  if (state === "preparing" || state === "connecting") {
+    return "Authenticating";
+  }
+
+  if (state === "connected") {
+    return "Connected";
+  }
+
+  if (state === "reconnecting") {
+    return "Reconnecting";
+  }
+
+  if (state.startsWith("error_")) {
+    return "Error";
+  }
+
+  return "Idle";
+};
+
+export const buildUpdateModalViewState = (forced: boolean, hasUpdate: boolean): UpdateModalViewState => {
+  if (!forced && !hasUpdate) {
+    return { shouldShow: false, mode: "soft" };
+  }
+
+  return {
+    shouldShow: true,
+    mode: forced ? "force" : "soft",
+  };
+};
+
 export const buildMainVpnViewState = (input: {
   vpnState: VpnState;
   jwtExpiresInSeconds: number | null;

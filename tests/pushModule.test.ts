@@ -153,4 +153,23 @@ describe("PushModule", () => {
     expect(cached.map((item) => item.id)).toEqual(["n3", "n2"]);
   });
 
+
+  it("поддерживает badge-счетчик и очистку inbox", async () => {
+    const store = new InMemorySecureStore();
+    const api = new FakeHttpClient();
+    const auth = new AuthModule(api as never, store);
+    await auth.login("acc1", "user@example.com", "pw");
+
+    const push = new PushModule(api as never, auth, new DeviceModule(store), store);
+
+    await push.listInbox();
+    expect(await push.getUnreadCount()).toBe(1);
+
+    await push.deleteNotification("n1");
+    expect(await push.getUnreadCount()).toBe(0);
+
+    await push.clearInbox();
+    expect(await push.getCachedInbox()).toEqual([]);
+  });
+
 });
