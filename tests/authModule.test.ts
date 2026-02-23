@@ -40,6 +40,27 @@ describe("AuthModule", () => {
     expect(result2).toBe("fresh-access");
     expect(api.refreshCalls).toBe(1);
   });
+
+  it("сохраняет список аккаунтов и активный аккаунт между перезапусками", async () => {
+    const store = new InMemorySecureStore();
+    const api = new FakeHttpClient();
+
+    const auth = new AuthModule(api as never, store);
+    await auth.login("acc1", "user@example.com", "pw");
+    await auth.oauthLogin("acc2", "google", "oauth-code");
+
+    expect(await auth.listAccounts()).toEqual(["acc1", "acc2"]);
+
+    const hydrated = new AuthModule(api as never, store);
+    const accountId = await hydrated.hydrateActiveAccount();
+
+    expect(accountId).toBe("acc2");
+    expect(hydrated.getActiveAccountId()).toBe("acc2");
+
+    await hydrated.logout("acc2");
+    expect(await hydrated.listAccounts()).toEqual(["acc1"]);
+    expect(hydrated.getActiveAccountId()).toBeNull();
+  });
 });
 
 const wait = async (ms: number): Promise<void> =>

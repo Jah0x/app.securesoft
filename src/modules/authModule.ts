@@ -7,6 +7,9 @@ interface AccountTokens {
 }
 
 export class AuthModule {
+  private static readonly ACTIVE_ACCOUNT_KEY = "auth:active_account";
+  private static readonly ACCOUNTS_KEY = "auth:accounts";
+
   private activeAccountId: string | null = null;
   private refreshInFlight: Promise<void> | null = null;
 
@@ -18,13 +21,21 @@ export class AuthModule {
   async login(accountId: string, email: string, password: string): Promise<void> {
     const tokens = await this.api.login(email, password);
     await this.saveTokens(accountId, tokens);
+    await this.addAccount(accountId);
     await this.setActiveAccount(accountId);
   }
 
   async oauthLogin(accountId: string, provider: string, code: string): Promise<void> {
     const tokens = await this.api.oauthLogin(provider, code);
     await this.saveTokens(accountId, tokens);
+    await this.addAccount(accountId);
     await this.setActiveAccount(accountId);
+  }
+
+  async hydrateActiveAccount(): Promise<string | null> {
+    const accountId = await this.secureStore.get(AuthModule.ACTIVE_ACCOUNT_KEY);
+    this.activeAccountId = accountId;
+    return this.activeAccountId;
   }
 
   async refreshActiveAccount(): Promise<void> {
@@ -69,14 +80,27 @@ export class AuthModule {
 
   async logout(accountId: string): Promise<void> {
     await this.secureStore.delete(this.tokensKey(accountId));
+    await this.removeAccount(accountId);
+
     if (this.activeAccountId === accountId) {
       this.activeAccountId = null;
+      await this.secureStore.delete(AuthModule.ACTIVE_ACCOUNT_KEY);
     }
   }
 
   async setActiveAccount(accountId: string): Promise<void> {
     await this.getTokens(accountId);
     this.activeAccountId = accountId;
+    await this.secureStore.set(AuthModule.ACTIVE_ACCOUNT_KEY, accountId);
+  }
+
+  async listAccounts(): Promise<string[]> {
+    const raw = await this.secureStore.get(AuthModule.ACCOUNTS_KEY);
+    if (!raw) {
+      return [];
+    }
+
+    return JSON.parse(raw) as string[];
   }
 
   getActiveAccountId(): string | null {
@@ -112,5 +136,21 @@ export class AuthModule {
 
   private tokensKey(accountId: string): string {
     return `auth:${accountId}:tokens`;
+  }
+
+  private async addAccount(accountId: string): Promise<void> {
+    const accounts = await this.listAccounts();
+    if (accounts.includes(accountId)) {
+      return;
+    }
+
+    accounts.push(accountId);
+    await this.secureStore.set(AuthModule.ACCOUNTS_KEY, JSON.stringify(accounts));
+  }
+
+  private async removeAccount(accountId: string): Promise<void> {
+    const accounts = await this.listAccounts();
+    const filtered = accounts.filter((value) => value !== accountId);
+    await this.secureStore.set(AuthModule.ACCOUNTS_KEY, JSON.stringify(filtered));
   }
 }
