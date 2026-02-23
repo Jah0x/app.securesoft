@@ -52,4 +52,26 @@ describe("MetricsModule", () => {
     expect(metrics.queuedCount()).toBe(0);
     expect(api.metricsCalls).toBe(1);
   });
+
+  it("режет большую очередь на батчи", async () => {
+    const store = new InMemorySecureStore();
+    const api = new FakeHttpClient();
+    const auth = new AuthModule(api as never, store);
+    await auth.login("acc1", "user@example.com", "pw");
+
+    const metrics = new MetricsModule(api as never, auth, new DeviceModule(store));
+
+    metrics.enqueueBatch(
+      Array.from({ length: 120 }, (_, index) => ({
+        event_id: `e-${index}`,
+        type: "vpn_connect",
+        ts: new Date().toISOString(),
+        payload: { connect_ms: 1000 + index },
+      })),
+    );
+
+    await metrics.flush("s1", 3, 50);
+
+    expect(api.metricsCalls).toBe(3);
+  });
 });

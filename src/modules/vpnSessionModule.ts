@@ -1,6 +1,7 @@
 import { HttpClient, HttpError } from "../api/httpClient.js";
 import { AuthModule } from "./authModule.js";
 import { DeviceModule } from "./deviceModule.js";
+import { createUuid } from "../utils/uuid.js";
 import type { Platform, VpnState, VpnTokenResponse } from "../types/contracts.js";
 
 export interface VpnConnector {
@@ -24,11 +25,36 @@ export interface VpnStatusSnapshot {
   endpointHostname: string | null;
   endpointAddress: string | null;
   jwtExpiresInSeconds: number | null;
+  sessionId: string | null;
+}
+
+export interface RefreshScheduler {
+  schedule(handler: () => Promise<void>, delayMs: number): void;
+  stop(): void;
+}
+
+export class TimeoutRefreshScheduler implements RefreshScheduler {
+  private timer: ReturnType<typeof setTimeout> | null = null;
+
+  schedule(handler: () => Promise<void>, delayMs: number): void {
+    this.stop();
+    this.timer = setTimeout(() => {
+      void handler();
+    }, Math.max(0, delayMs));
+  }
+
+  stop(): void {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+  }
 }
 
 export class VpnSessionModule {
   private state: VpnState = "idle";
   private currentToken: VpnTokenResponse | null = null;
+  private currentSessionId: string | null = null;
 
   constructor(
     private readonly api: HttpClient,
@@ -38,10 +64,15 @@ export class VpnSessionModule {
     private readonly platform: Platform,
     private readonly appVersion: string,
     private readonly networkStatus?: NetworkStatusProvider,
+    private readonly scheduler: RefreshScheduler = new TimeoutRefreshScheduler(),
   ) {}
 
   getState(): VpnState {
     return this.state;
+  }
+
+  getCurrentSessionId(): string | null {
+    return this.currentSessionId;
   }
 
   getStatusSnapshot(now = new Date()): VpnStatusSnapshot {
@@ -51,6 +82,7 @@ export class VpnSessionModule {
         endpointHostname: null,
         endpointAddress: null,
         jwtExpiresInSeconds: null,
+        sessionId: this.currentSessionId,
       };
     }
 
@@ -60,6 +92,7 @@ export class VpnSessionModule {
       endpointHostname: this.currentToken.endpoint.hostname,
       endpointAddress: this.currentToken.endpoint.address,
       jwtExpiresInSeconds: Math.max(0, Math.floor((expiresAt - now.getTime()) / 1000)),
+      sessionId: this.currentSessionId,
     };
   }
 
@@ -73,7 +106,9 @@ export class VpnSessionModule {
 
       const token = await this.fetchVpnToken();
       await this.applyTokenAndConnect(token);
+      this.currentSessionId = createUuid();
       this.state = "connected";
+      this.scheduleJwtRefresh();
     } catch (error) {
       this.state = this.classifyError(error);
       throw error;
@@ -81,19 +116,21 @@ export class VpnSessionModule {
   }
 
   async disconnect(): Promise<void> {
+    this.scheduler.stop();
     await this.connector.disconnect();
     this.state = "disconnected";
     this.currentToken = null;
+    this.currentSessionId = null;
   }
 
-  shouldRefreshJwt(now = new Date()): boolean {
+  shouldRefreshJwt(now = new Date(), refreshBeforeSeconds = 120): boolean {
     if (!this.currentToken) {
       return false;
     }
 
     const expiry = new Date(this.currentToken.expires_at).getTime();
     const deltaSeconds = (expiry - now.getTime()) / 1000;
-    return deltaSeconds <= 120;
+    return deltaSeconds <= refreshBeforeSeconds;
   }
 
   async refreshJwtIfNeeded(now = new Date()): Promise<boolean> {
@@ -103,6 +140,7 @@ export class VpnSessionModule {
 
     const token = await this.fetchVpnToken();
     await this.applyTokenAndConnect(token);
+    this.scheduleJwtRefresh();
     return true;
   }
 
@@ -130,6 +168,24 @@ export class VpnSessionModule {
     }
 
     throw lastError;
+  }
+
+  private scheduleJwtRefresh(): void {
+    if (!this.currentToken || this.state !== "connected") {
+      return;
+    }
+
+    const expiryMs = new Date(this.currentToken.expires_at).getTime();
+    const refreshMs = expiryMs - 90_000;
+    const delayMs = refreshMs - Date.now();
+
+    this.scheduler.schedule(async () => {
+      try {
+        await this.refreshJwtIfNeeded();
+      } catch {
+        await this.reconnectWithBackoff();
+      }
+    }, delayMs);
   }
 
   private async fetchVpnToken(): Promise<VpnTokenResponse> {

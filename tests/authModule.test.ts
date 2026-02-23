@@ -61,6 +61,21 @@ describe("AuthModule", () => {
     expect(await hydrated.listAccounts()).toEqual(["acc1"]);
     expect(hydrated.getActiveAccountId()).toBeNull();
   });
+
+  it("вызывает cleanup hooks при logout", async () => {
+    const api = new FakeHttpClient();
+    const auth = new AuthModule(api as never, new InMemorySecureStore());
+    await auth.login("acc1", "user@example.com", "pw");
+
+    const cleaned: string[] = [];
+    auth.onLogout(async (accountId) => {
+      cleaned.push(accountId);
+    });
+
+    await auth.logout("acc1");
+
+    expect(cleaned).toEqual(["acc1"]);
+  });
 });
 
 const wait = async (ms: number): Promise<void> =>

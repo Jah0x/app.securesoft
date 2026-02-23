@@ -12,6 +12,7 @@ export class AuthModule {
 
   private activeAccountId: string | null = null;
   private refreshInFlight: Promise<void> | null = null;
+  private logoutHandlers: Array<(accountId: string) => Promise<void>> = [];
 
   constructor(
     private readonly api: HttpClient,
@@ -36,6 +37,10 @@ export class AuthModule {
     const accountId = await this.secureStore.get(AuthModule.ACTIVE_ACCOUNT_KEY);
     this.activeAccountId = accountId;
     return this.activeAccountId;
+  }
+
+  onLogout(handler: (accountId: string) => Promise<void>): void {
+    this.logoutHandlers.push(handler);
   }
 
   async refreshActiveAccount(): Promise<void> {
@@ -81,6 +86,10 @@ export class AuthModule {
   async logout(accountId: string): Promise<void> {
     await this.secureStore.delete(this.tokensKey(accountId));
     await this.removeAccount(accountId);
+
+    for (const handler of this.logoutHandlers) {
+      await handler(accountId);
+    }
 
     if (this.activeAccountId === accountId) {
       this.activeAccountId = null;

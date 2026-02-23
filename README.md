@@ -4,12 +4,12 @@
 
 ## Что реализовано
 
-- `AuthModule` — login/refresh/logout, OAuth login, хранение списка аккаунтов/активного аккаунта и anti-race защита при refresh после 401.
-- `DeviceModule` — генерация/хранение `device_id`, регистрация устройства в ЛК (`/devices/register`) и хранение `device_user`.
-- `VpnSessionModule` — state machine подключения VPN, получение `/vpn/token`, offline-проверка, reconnect с exponential backoff и проверка TTL JWT.
-- `MetricsModule` — буферизация, дедупликация и batch-отправка метрик в `/api/v1/metrics/client` с retry/backoff.
-- `PushModule` — регистрация push token, загрузка inbox-уведомлений, локальный кеш inbox и отметка о прочтении.
-- `UpdateModule` — проверка версии приложения и forced-update флага.
+- `AuthModule` — login/refresh/logout, OAuth login, хранение списка аккаунтов/активного аккаунта, anti-race защита при refresh после 401 и cleanup hooks для модулей при logout.
+- `DeviceModule` — генерация/хранение `device_id`, регистрация устройства в ЛК (`/devices/register`) и хранение `device_user` в изоляции по аккаунтам.
+- `VpnSessionModule` — state machine подключения VPN, получение `/vpn/token`, offline-проверка, reconnect с exponential backoff, отдельный `session_id`, snapshot статуса и авто-планировщик refresh JWT до истечения TTL.
+- `MetricsModule` — буферизация, дедупликация, батч-отправка в `/api/v1/metrics/client` с chunking и retry/backoff.
+- `PushModule` — регистрация push token для активного аккаунта, очередь отложенной отправки token при сетевых ошибках, inbox-уведомления, локальный кеш inbox и отметка о прочтении.
+- `UpdateModule` — проверка версии приложения, forced-update флага, сравнение semver для minimum supported version и определения доступного обновления.
 - `HttpClient` — typed-контракты для основных API.
 
 > Примечание: это кросс-платформенный TypeScript core, который затем подключается к React Native UI и нативным VPN bridge (Network Extension / VpnService).
