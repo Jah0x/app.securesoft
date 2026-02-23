@@ -30,7 +30,13 @@ npm install
 npm run lint
 npm test
 npm run build
+npm run check:semver
 ```
+
+## CI/CD
+
+- Добавлен GitHub Actions workflow `.github/workflows/ci.yml`: выполняет `lint`, `test`, `build` и `check:semver` на push/PR.
+- Для релизных тегов `v*.*.*` semver-проверка дополнительно сверяет версию в теге и `package.json`.
 
 ## Документация
 
