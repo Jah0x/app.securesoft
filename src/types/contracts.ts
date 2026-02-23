@@ -9,6 +9,28 @@ export interface DeviceRegistrationResponse {
   device_user: string;
 }
 
+
+export interface RegisterRequest {
+  email: string;
+  password: string;
+}
+
+export interface PasswordRecoveryRequest {
+  email: string;
+}
+
+export interface PasswordResetRequest {
+  reset_token: string;
+  new_password: string;
+}
+
+export interface AccountInfo {
+  account_id: string;
+  email: string;
+  subscription_tier: string;
+  is_active: boolean;
+}
+
 export interface VpnTokenRequest {
   device_id: string;
   platform: Platform;
