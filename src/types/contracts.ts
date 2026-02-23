@@ -5,6 +5,10 @@ export interface LoginResponse {
   refreshToken: string;
 }
 
+export interface DeviceRegistrationResponse {
+  device_user: string;
+}
+
 export interface VpnTokenRequest {
   device_id: string;
   platform: Platform;
@@ -42,6 +46,30 @@ export interface MetricsBatch {
 export interface MetricsResponse {
   accepted: number;
   rejected: number;
+}
+
+export type PushProvider = "apns" | "fcm";
+
+export interface PushTokenRegistration {
+  device_id: string;
+  account_id: string;
+  provider: PushProvider;
+  token: string;
+}
+
+export interface PushNotification {
+  id: string;
+  title: string;
+  body: string;
+  deep_link?: string;
+  created_at: string;
+  is_read: boolean;
+}
+
+export interface AppVersionInfo {
+  latest_version: string;
+  minimum_supported_version: string;
+  forced_update: boolean;
 }
 
 export type VpnState =
