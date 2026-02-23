@@ -1,0 +1,27 @@
+def require_env!(name)
+  value = ENV[name]
+  UI.user_error!("Missing required env #{name}") if value.nil? || value.empty?
+end
+
+platform :ios do
+  desc "Upload build to TestFlight"
+  lane :beta do
+    require_env!("APP_STORE_CONNECT_API_KEY_ID")
+    require_env!("APP_STORE_CONNECT_ISSUER_ID")
+    require_env!("APP_STORE_CONNECT_API_KEY_CONTENT")
+
+    UI.message("iOS TestFlight lane configured")
+    UI.message("Bundle upload must be triggered in mobile-native repo")
+  end
+end
+
+platform :android do
+  desc "Upload build to Google Play Internal"
+  lane :internal do
+    require_env!("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")
+    require_env!("ANDROID_PACKAGE_NAME")
+
+    UI.message("Android internal lane configured")
+    UI.message("AAB upload must be triggered in mobile-native repo")
+  end
+end

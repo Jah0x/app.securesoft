@@ -122,6 +122,11 @@ export class PushModule {
     return JSON.parse(raw) as PushNotification[];
   }
 
+
+  async ingestNotification(notification: PushNotification): Promise<void> {
+    await this.upsertInboxNotification(notification);
+  }
+
   async markAsRead(notificationId: string): Promise<void> {
     await this.auth.runWithAccessToken((accessToken) => this.api.markNotificationRead(accessToken, notificationId));
 
