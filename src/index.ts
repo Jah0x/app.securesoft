@@ -8,3 +8,4 @@ export * from "./modules/updateModule.js";
 export * from "./storage/secureStore.js";
 export * from "./types/contracts.js";
 export * from "./modules/appCoreModule.js";
+export * from "./modules/resilienceModule.js";

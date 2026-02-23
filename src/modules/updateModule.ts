@@ -1,6 +1,15 @@
 import { HttpClient } from "../api/httpClient.js";
 import type { AppVersionInfo, Platform } from "../types/contracts.js";
 
+export type UpdateMode = "none" | "soft" | "blocking";
+
+export interface UpdatePolicy {
+  mode: UpdateMode;
+  latestVersion: string;
+  minimumSupportedVersion: string;
+  redirectUrl: string | null;
+}
+
 export class UpdateModule {
   constructor(
     private readonly api: HttpClient,
@@ -24,6 +33,27 @@ export class UpdateModule {
   async isUpdateAvailable(): Promise<boolean> {
     const versionInfo = await this.checkVersion();
     return compareSemver(this.appVersion, versionInfo.latest_version) < 0;
+  }
+
+  async getUpdatePolicy(storeUrls: { ios: string; android: string }): Promise<UpdatePolicy> {
+    const versionInfo = await this.checkVersion();
+    const minSupportedReached = compareSemver(this.appVersion, versionInfo.minimum_supported_version) >= 0;
+
+    if (compareSemver(this.appVersion, versionInfo.latest_version) >= 0) {
+      return {
+        mode: "none",
+        latestVersion: versionInfo.latest_version,
+        minimumSupportedVersion: versionInfo.minimum_supported_version,
+        redirectUrl: null,
+      };
+    }
+
+    return {
+      mode: versionInfo.forced_update || !minSupportedReached ? "blocking" : "soft",
+      latestVersion: versionInfo.latest_version,
+      minimumSupportedVersion: versionInfo.minimum_supported_version,
+      redirectUrl: this.platform === "ios" ? storeUrls.ios : storeUrls.android,
+    };
   }
 }
 

@@ -5,7 +5,32 @@ import {
   InMemorySecureStore,
   MetricsModule,
   type MetricsIntervalScheduler,
+  type NativeVpnMetricsProvider,
+  type ResourceMetricsProvider,
 } from "../src/index.js";
+
+
+
+class FakeNativeMetricsProvider implements NativeVpnMetricsProvider {
+  async collect() {
+    return {
+      connect_ms: 250,
+      rtt_ms: 40,
+      throughput_up_kbps: 1200,
+      throughput_down_kbps: 2200,
+    };
+  }
+}
+
+class FakeResourceMetricsProvider implements ResourceMetricsProvider {
+  async collect() {
+    return {
+      cpu_percent: 17,
+      memory_mb: 145,
+      battery_percent: 87,
+    };
+  }
+}
 
 class FakeHttpClient {
   metricsCalls = 0;
@@ -134,4 +159,38 @@ describe("MetricsModule", () => {
     metrics.stopPeriodicFlush();
     expect(scheduler.stopped).toBe(true);
   });
+
+  it("собирает RED и ресурсные метрики по расписанию", async () => {
+    const store = new InMemorySecureStore();
+    const api = new FakeHttpClient();
+    const auth = new AuthModule(api as never, store);
+    await auth.login("acc1", "user@example.com", "pw");
+
+    const flushScheduler = new FakeIntervalScheduler();
+    const collectionScheduler = new FakeIntervalScheduler();
+    const metrics = new MetricsModule(
+      api as never,
+      auth,
+      new DeviceModule(store),
+      flushScheduler,
+      collectionScheduler,
+    );
+
+    metrics.startPeriodicCollection(
+      "session-1",
+      { vpn: new FakeNativeMetricsProvider(), resources: new FakeResourceMetricsProvider() },
+      3000,
+    );
+
+    expect(collectionScheduler.intervalMs).toBe(3000);
+
+    await collectionScheduler.tick();
+
+    expect(api.metricsCalls).toBe(1);
+    expect(metrics.queuedCount()).toBe(0);
+
+    metrics.stopPeriodicCollection();
+    expect(collectionScheduler.stopped).toBe(true);
+  });
+
 });
