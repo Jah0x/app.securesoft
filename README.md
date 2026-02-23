@@ -7,7 +7,7 @@
 - `AuthModule` — login/refresh/logout, OAuth login, хранение списка аккаунтов/активного аккаунта, anti-race защита при refresh после 401 и cleanup hooks для модулей при logout.
 - `DeviceModule` — генерация/хранение `device_id`, регистрация устройства в ЛК (`/devices/register`) и хранение `device_user` в изоляции по аккаунтам.
 - `VpnSessionModule` — state machine подключения VPN, получение `/vpn/token`, offline-проверка, reconnect с exponential backoff, отдельный `session_id`, snapshot статуса и авто-планировщик refresh JWT до истечения TTL.
-- `MetricsModule` — буферизация, дедупликация, батч-отправка в `/api/v1/metrics/client` с chunking и retry/backoff.
+- `MetricsModule` — буферизация, дедупликация, батч-отправка в `/api/v1/metrics/client` с chunking и retry/backoff, а также периодический flush во время активной VPN-сессии.
 - `PushModule` — регистрация push token для активного аккаунта, очередь отложенной отправки token при сетевых ошибках, inbox-уведомления, локальный кеш inbox и отметка о прочтении.
 - `UpdateModule` — проверка версии приложения, forced-update флага, сравнение semver для minimum supported version и определения доступного обновления.
 - `AppCoreModule` — orchestration сценарии верхнего уровня: login+device registration+push flush, connect/disconnect VPN с метриками, switch account и logout cleanup.
