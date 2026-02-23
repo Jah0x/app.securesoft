@@ -1,71 +1,151 @@
-# Невыполненные пункты ТЗ
+Ниже приведён план работ, разбитый на логические блоки и приоритеты (P0 – must‑have для MVP; P1 – важно для первого релиза; P2 – дополнительные улучшения). Задачи сгруппированы по областям, чтобы команда могла планировать спринты.
 
-Документ фиксирует только оставшиеся задачи из последнего расширенного ТЗ, которые в этом репозитории ещё **не реализованы**.
+1. Нативный VPN‑мост и безопасное хранилище (P0)
 
-## 1) Нативный VPN‑мост и SecureStore ✅
+iOS‑модуль (Swift + Network Extension)
 
-- iOS native VPN‑модуль на Swift (Network Extension / `NEPacketTunnelProvider`) с методами `connect(config)` и `disconnect()`.
-- Настройка TLS/SNI в iOS‑туннеле на уровне нативного кода.
-- Экспорт iOS VPN‑модуля в JS через React Native Native Module.
-- Android native VPN‑модуль на Kotlin (`VpnService`) с TLS/HTTP2 подключением и Basic‑auth.
-- Обработка reconnect/ошибок на уровне Android native tunnel.
-- Экспорт Android VPN‑модуля в JS.
-- Платформенный SecureStore:
-  - iOS Keychain;
-  - Android EncryptedSharedPreferences.
+Реализовать NEPacketTunnelProvider, который подключается к VPN‑серверу через HTTPS/HTTP2 по адресу/порту из /vpn/token и устанавливает TLS с правильным SNI. Аутентификация: Basic (username = vpn_username, password = vpn_jwt).
 
-## 2) Базовый UI (Core MVP) ✅
+Поддержать переподключение и обновление токена при истечении TTL (10–15 минут).
 
-- React Navigation (Stack + Tab) с экранами Auth/Main VPN/Status/Notifications/Accounts.
-- Auth UI: логин/регистрация/восстановление пароля/выбор OAuth‑провайдера.
-- Main VPN UI: визуализация FSM, progress bar TTL JWT, сервер и подписка.
-- Status UI: throughput, RTT, RED‑счётчики, объём трафика в realtime.
-- Accounts UI: список/выбор/удаление аккаунтов.
-- Notifications UI: inbox, mark as read, deep‑link навигация.
+Экспортировать методы connect(config) и disconnect() в React Native через Native Module.
 
-## 3) Интеграция с API (новые эндпоинты) ✅
+Android‑модуль (Kotlin + VpnService)
 
-- Добавлены client-side контракты/вызовы для `/auth/register`, `/auth/password/recover`, `/auth/password/reset`, `/accounts`, `/accounts/switch`, `/accounts/:id` (DELETE).
-- Подтверждение серверной реализации маршрутов остаётся вне scope текущего репозитория.
+Реализовать сервис, который устанавливает VPN‑туннель с TLS/HTTP2 / QUIC на основе полученных из /vpn/token endpoint.address и endpoint.hostname.
 
-## 4) RED‑метрики и ресурсные метрики ✅
+Обработать переподключение и обновление JWT при разрыве соединения.
 
-- Нативный сбор RED‑метрик на уровне туннеля (точные `connect_ms`, RTT, throughput из native VPN layer).
-- Периодический сбор CPU/памяти/энергопотребления через платформенные API (`ProcessInfo`, `ActivityManager`, `TrafficStats`, `BatteryStats`) и публикация в метрики.
+Предоставить JS‑обёртку (Native Module) с методами connect(config)/disconnect().
 
-## 5) Push‑интеграция ✅
+SecureStore
 
-- FCM интеграция в Android приложении (`@react-native-firebase/messaging` или аналог), foreground/background обработка.
-- APNS интеграция в iOS приложении (разрешения, device token, `UNUserNotificationCenter` delegate).
-- Отображение уведомлений через нативные/JS notification библиотеки.
-- Локальное хранение inbox в платформенном secure storage.
+Для iOS использовать Keychain для хранения access/refresh‑токенов, device ID, push tokens.
 
-## 6) P1: развитие функционала и безопасность ✅
+Для Android – EncryptedSharedPreferences или KeyStore.
 
-- Полноценный Update UI (блокирующий/мягкий модал + редирект в Store).
-- Полноценные экраны ошибок с UX‑рекомендациями.
-- Offline‑кэширование UI‑уровня и последующая синхронизация всех пользовательских действий.
-- Локализация сообщений на несколько языков.
-- Нативные поля метрик из VPN layer.
+Обновить модули Auth/Device/Push, чтобы они работали через SecureStore вместо RAM.
 
-## 7) Тесты и CI/CD ✅
+2. UI / UX (P0)
 
-- Integration‑тесты с расширенными HTTP‑моками для сквозных сценариев добавлены (`tests/integrationExtendedHttpMocks.test.ts`).
-- E2E‑симуляция сценария логин → токен → подключение → reconnect → logout добавлена в `tests/e2eFlowSimulation.test.ts` (core-level flow).
-- GitHub Actions workflow расширен: базовый CI + отдельный mobile release dry-run с fastlane hooks (`.github/workflows/mobile-release.yml`).
-- Автопроверка semver перед релизом *(реализовано для проверки `package.json` и релизных тегов)*.
+Навигация и экраны
 
-## 8) Документация и support ✅
+Настроить React Navigation (Stack + Tab). Экраны: Auth (логин, регистрация, восстановление пароля, OAuth), Main VPN, Status, Notifications Inbox, Accounts.
 
-- Добавлен developer README для мобильных окружений (`docs/DEVELOPER_MOBILE_README.md`).
-- Добавлена пользовательская документация (`docs/USER_SUPPORT_GUIDE.md`).
+Реализовать minimal design: главный экран – одна кнопка «Подключиться/Отключиться», счетчик оставшегося времени JWT, название сервера/региона, статус подписки.
 
-## 9) P2: дополнительные улучшения ✅
+Экран статуса должен отображать throughput, RTT, RED‑метрики, объём трафика в реальном времени.
 
-- Интернационализация через lightweight i18n-модуль и переключение языка (`src/modules/i18nModule.ts`).
-- Поддержка тёмной темы и system/light режимов (`src/modules/experienceModule.ts`).
-- Биллинговый модуль со статусами trial/renewal/cancel/expired (`src/modules/billingModule.ts`).
-- Конфигурируемый split-tunneling include/exclude (`src/modules/splitTunnelModule.ts`).
-- Quick action/shortcut intent mapping для быстрого подключения (`src/modules/experienceModule.ts`).
-- Accessibility-настройки (VoiceOver/TalkBack, контраст, dynamic type) в experience-модуле.
-- Unit‑тесты для P2 core-модулей добавлены (`tests/p2Modules.test.ts`); нативные XCTest/JUnit остаются в mobile-репозиториях.
+Notifications UI – список сообщений, возможность отметить прочитанным, переход по deep‑link.
+
+Accounts UI – список аккаунтов, переключение, удаление, отображение подписки и оставшихся устройств.
+
+Состояние приложения
+
+Визуализировать finite state machine: Idle → Authenticating → Connected → Reconnecting → Error → Idle.
+
+Отображать переходы и ошибки (например, истечение JWT, ошибка сети) с UX‑подсказками.
+
+Ошибки и обновления
+
+Реализовать модальные окна для обязательного обновления версии (force update) и мягкого обновления (soft update).
+
+Создать экран «Ошибка» с рекомендациями пользователю (отмена подписки, превышение лимита устройств, проблемы с сетью).
+
+3. Интеграция с сервером и метрики (P0)
+
+API
+
+Подключиться к /vpn/token и /api/v1/vpn/public-key в ЛК для получения адреса сервера, SNI и JWT.
+
+Реализовать /api/v1/metrics/client для отправки метрик; отправлять RED‑метрики (latency, throughput, errors) и ресурсные данные (CPU, память, батарея, сеть).
+
+Использовать уникальные ID событий и дедубликацию, как в MetricsModule.
+
+Нативные RED‑метрики
+
+В iOS‑ и Android‑VPN‑модулях собирать точные значения: время установления туннеля (connect_ms), среднюю/максимальную RTT, входящий/исходящий throughput, количество перерегистраций; публиковать их в MetricsModule.
+
+Для ресурсных метрик использовать ProcessInfo (iOS) и ActivityManager/TrafficStats/BatteryStats (Android).
+
+4. Push‑уведомления (P0)
+
+Интеграция с FCM и APNS
+
+В Android включить react-native-firebase/messaging или аналог; запросить разрешения, обработать получение device_token, передавать его в ЛК через PushModule.
+
+В iOS настроить APNS: запрос разрешений, реализовать UNUserNotificationCenter delegate, обработать foreground/background сообщения.
+
+Реализовать отображение уведомлений через библиотеку (например, react-native-push-notification), сохранить уведомление в secure inbox, обработать deep‑link переход.
+
+Inbox и badge
+
+Локально хранить историю уведомлений в SecureStore, отмечать прочитанные, обновлять badge на иконке.
+
+Реализовать возможность удалить одно уведомление или очистить весь inbox.
+
+5. Функциональные улучшения и безопасность (P1)
+
+UpdateModule
+
+Реализовать UI для мягкого/жёсткого обновления с редиректом в App Store/Play Store.
+
+Добавить обработку обязательных обновлений на бэкенде (endpoint возвращает флаг в ответе /vpn/token).
+
+Локализация
+
+Использовать i18next или аналог; подготовить строки на EN/RU (и другие языки, если нужно). Переключение языка в настройках.
+
+Тёмная тема и accessibility
+
+Настроить поддержку Appearance (dark/light) и контрастные цвета. Протестировать с VoiceOver/TalkBack. Использовать dynamic type.
+
+Security
+
+Реализовать TLS‑pinning (например, через react-native-ssl-pinning), проверку хеша сертификата TrustTunnel.
+
+Очистка всех чувствительных данных при выходе из аккаунта.
+
+Защита от эмуляторов/рутованных устройств (обнаружение root/Jailbreak).
+
+6. Тестирование и CI/CD (P1)
+
+Integration‑tests
+
+Создать HTTP‑моки для бэкенд‑эндпоинтов /login, /vpn/token, /api/v1/metrics/client и push‑интеграции. Покрыть сквозные сценарии: логин → получение device ID → запрос токена → подключение → отправка метрик → переподключение → logout.
+
+E2E‑tests
+
+Использовать Detox (или Appium) для тестирования на реальных/эмуляторных устройствах: проверять навигацию, перезапуск приложения, получение push‑уведомлений, принудительное обновление.
+
+CI/CD
+
+Настроить GitHub Actions: lint и unit‑тесты для TypeScript, сборка Android/iOS, запуск integration‑ и E2E‑тестов, сборка release и публикация в TestFlight/Google Play Internal.
+
+Интегрировать fastlane для автоматической подписи, упаковки и загрузки билдов.
+
+Настроить автоматическую проверку semver и генерацию changelog.
+
+7. Документация и поддержка (P1)
+
+Developer README
+
+Описать настройку окружения, запуск приложений на эмуляторе/устройстве, генерацию сертификатов, настройку FCM/APNS, тестирование и деплой.
+
+User Guide
+
+Подготовить документацию для конечных пользователей: описание возможностей, требования к подписке, порядок подключения, FAQ, восстановление доступа.
+
+Support и обратная связь
+
+Реализовать механизм отправки отчётов об ошибках и обратной связи из приложения (например, через почту или трекер).
+
+8. Дополнительные улучшения (P2)
+
+In‑app purchase: интегрировать react-native-iap для покупки и продления подписки, обработку триалов, отмены.
+
+Split‑tunneling: предусмотреть настройку для исключения определённых приложений/доменов из VPN‑туннеля (при наличии поддержки на сервере).
+
+Quick‑connect widget: добавить виджет или ярлык для быстрого подключения/отключения VPN прямо с главного экрана.
+
+Accessibility: обеспечить полную поддержку скрин‑ридеров, контрастных цветов и масштабируемого текста.
