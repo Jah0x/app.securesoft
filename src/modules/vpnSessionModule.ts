@@ -13,7 +13,19 @@ export interface VpnConnector {
     password: string;
     dns: string;
     tls?: {
+      sni?: string;
       alpn?: string[];
+      serverPublicKey?: string;
+    };
+    auth?: {
+      basicAuth?: {
+        username: string;
+        password: string;
+      };
+    };
+    transport?: {
+      http2?: boolean;
+      quic?: boolean;
     };
   }): Promise<void>;
   disconnect(): Promise<void>;
@@ -228,6 +240,13 @@ export class VpnSessionModule {
 
   private async applyTokenAndConnect(token: VpnTokenResponse): Promise<void> {
     this.currentToken = token;
+    const publicKey =
+      typeof (this.api as HttpClient & { getVpnPublicKey?: (accessToken: string) => Promise<{ public_key: string }> })
+        .getVpnPublicKey === "function"
+        ? await this.auth.runWithAccessToken((accessToken) =>
+            (this.api as HttpClient & { getVpnPublicKey: (accessToken: string) => Promise<{ public_key: string }> }).getVpnPublicKey(accessToken),
+          )
+        : null;
 
     await this.connector.connect({
       address: token.endpoint.address,
@@ -236,7 +255,21 @@ export class VpnSessionModule {
       dns: token.endpoint.dns,
       username: token.vpn_username,
       password: token.vpn_jwt,
-      tls: token.tls,
+      tls: {
+        sni: token.endpoint.hostname,
+        alpn: token.tls?.alpn,
+        serverPublicKey: publicKey?.public_key,
+      },
+      auth: {
+        basicAuth: {
+          username: token.vpn_username,
+          password: token.vpn_jwt,
+        },
+      },
+      transport: {
+        http2: token.endpoint.protocol.toLowerCase().includes("http2"),
+        quic: token.endpoint.protocol.toLowerCase().includes("quic"),
+      },
     });
   }
 

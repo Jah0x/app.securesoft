@@ -136,6 +136,26 @@ export class PushModule {
     await this.saveInbox(next);
   }
 
+
+  async getUnreadCount(): Promise<number> {
+    const inbox = await this.getCachedInbox();
+    return inbox.filter((item) => !item.is_read).length;
+  }
+
+  async deleteNotification(notificationId: string): Promise<void> {
+    if (!this.secureStore) {
+      return;
+    }
+
+    const inbox = await this.getCachedInbox();
+    const next = inbox.filter((notification) => notification.id !== notificationId);
+    await this.saveInbox(next);
+  }
+
+  async clearInbox(): Promise<void> {
+    await this.saveInbox([]);
+  }
+
   private requireAccountId(): string {
     const accountId = this.auth.getActiveAccountId();
     if (!accountId) {
