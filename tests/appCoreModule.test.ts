@@ -13,6 +13,8 @@ import {
 class FakeHttpClient {
   public metricsCalls = 0;
   public registeredPushTokens: Array<{ provider: string; token: string }> = [];
+  public postedMetricTypes: string[] = [];
+  public postedMetricPayloads: Array<Record<string, unknown>> = [];
 
   async login() {
     return { accessToken: "access", refreshToken: "refresh" };
@@ -48,8 +50,10 @@ class FakeHttpClient {
     };
   }
 
-  async postMetrics(_: string, batch: { events: Array<{ type: string }> }) {
+  async postMetrics(_: string, batch: { events: Array<{ type: string; payload: Record<string, unknown> }> }) {
     this.metricsCalls += 1;
+    this.postedMetricTypes.push(...batch.events.map((event) => event.type));
+    this.postedMetricPayloads.push(...batch.events.map((event) => event.payload));
     return { accepted: batch.events.length, rejected: 0 };
   }
 }
@@ -137,6 +141,27 @@ describe("AppCoreModule", () => {
     expect(connector.disconnectCalls).toBe(1);
     expect(metrics.queuedCount()).toBe(0);
     expect(api.metricsCalls).toBe(1);
+  });
+
+
+  it("отправляет расширенные reconnect-метрики с категоризацией", async () => {
+    const { app, api } = await setup();
+
+    await app.loginAndPrepare({
+      accountId: "acc1",
+      email: "user@example.com",
+      password: "pw",
+    });
+
+    await app.connectVpn();
+    await app.reconnectVpnWithMetrics(3, 1);
+    await app.disconnectVpnAndFlushMetrics();
+
+    expect(api.postedMetricTypes).toContain("vpn_reconnect_success");
+
+    const reconnectPayload = api.postedMetricPayloads.find((payload) => payload.reconnect_total_attempts);
+    expect(reconnectPayload?.category).toBe("connection");
+    expect(reconnectPayload?.severity).toBe("info");
   });
 
   it("чистит данные аккаунта при logout через AuthModule hooks", async () => {
