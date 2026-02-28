@@ -20,3 +20,4 @@ export * from "./modules/supportModule.js";
 export * from "./native/mobileVpnProviders.js";
 export * from "./native/pushAdapters.js";
 export * from "./ui/navigation.js";
+export * from "./ui/deepLinkRouter.js";
