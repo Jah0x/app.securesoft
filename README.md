@@ -48,3 +48,4 @@ npm run check:semver
 - [MOBILE_APPS_SPEC.md](./MOBILE_APPS_SPEC.md) — полное ТЗ.
 - [Developer Mobile README](./docs/DEVELOPER_MOBILE_README.md).
 - [User Support Guide](./docs/USER_SUPPORT_GUIDE.md).
+- [QA Smoke Checklist](./docs/QA_SMOKE.md).

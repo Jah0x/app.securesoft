@@ -36,6 +36,7 @@ class FakePushPermission {
 class FakePushTokenAdapter {
   provider = "fcm" as const;
   handler: ((payload: { title: string; body: string; deepLink?: string }) => Promise<void>) | null = null;
+  openHandler: ((payload: { title: string; body: string; deepLink?: string }) => Promise<void>) | null = null;
 
   async getDeviceToken(): Promise<string> {
     return "device-token";
@@ -43,6 +44,18 @@ class FakePushTokenAdapter {
 
   onForegroundMessage(handler: (payload: { title: string; body: string; deepLink?: string }) => Promise<void>): void {
     this.handler = handler;
+  }
+
+  onNotificationOpen(handler: (payload: { title: string; body: string; deepLink?: string }) => Promise<void>): void {
+    this.openHandler = handler;
+  }
+}
+
+class FakeNavigator {
+  routeHistory: string[] = [];
+
+  navigate(route: string): void {
+    this.routeHistory.push(route);
   }
 }
 
@@ -95,7 +108,7 @@ describe("completion of unfinished TODO areas", () => {
     expect(isTransitionAllowed("Connected", "Authenticating")).toBe(false);
   });
 
-  it("bootstrap push coordinator: permission + token + foreground inbox", async () => {
+  it("bootstrap push coordinator: permission + token + ingest + route change", async () => {
     const store = new InMemorySecureStore();
     const api = new FakeHttpClient();
     const auth = new AuthModule(api as never, store);
@@ -103,13 +116,16 @@ describe("completion of unfinished TODO areas", () => {
 
     const push = new PushModule(api as never, auth, new DeviceModule(store), store);
     const tokenAdapter = new FakePushTokenAdapter();
-    const coordinator = new PushPlatformCoordinator(push, new FakePushPermission(), tokenAdapter);
+    const navigator = new FakeNavigator();
+    const coordinator = new PushPlatformCoordinator(push, new FakePushPermission(), tokenAdapter, navigator);
 
     await expect(coordinator.bootstrap()).resolves.toBe(true);
     await tokenAdapter.handler?.({ title: "Hello", body: "World", deepLink: "app://inbox" });
+    await tokenAdapter.openHandler?.({ title: "From tray", body: "Click", deepLink: "app://status" });
 
     const cached = await push.getCachedInbox();
-    expect(cached).toHaveLength(1);
-    expect(cached[0]?.title).toBe("Hello");
+    expect(cached).toHaveLength(2);
+    expect(cached.map((item) => item.title)).toEqual(["From tray", "Hello"]);
+    expect(navigator.routeHistory).toEqual(["Notifications", "Status"]);
   });
 });

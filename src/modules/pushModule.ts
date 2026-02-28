@@ -16,6 +16,11 @@ export interface PushPermissionAdapter {
 export interface PushRuntimeAdapter {
   onForegroundMessage(handler: (notification: PushNotification) => Promise<void>): void;
   onBackgroundMessage(handler: (notification: PushNotification) => Promise<void>): void;
+  onNotificationOpen?(handler: (notification: PushNotification) => Promise<void>): void;
+}
+
+export interface PushNotificationOpenAdapter {
+  onNotificationOpen(notification: PushNotification): Promise<void>;
 }
 
 export class PushModule {
@@ -30,6 +35,7 @@ export class PushModule {
     private readonly secureStore?: SecureStore,
     private readonly permissions?: PushPermissionAdapter,
     private readonly runtime?: PushRuntimeAdapter,
+    private readonly notificationOpenAdapter?: PushNotificationOpenAdapter,
   ) {}
 
   async registerToken(provider: PushProvider, token: string): Promise<void> {
@@ -84,6 +90,11 @@ export class PushModule {
 
     this.runtime.onBackgroundMessage(async (notification) => {
       await this.upsertInboxNotification(notification);
+    });
+
+    this.runtime.onNotificationOpen?.(async (notification) => {
+      await this.upsertInboxNotification(notification);
+      await this.notificationOpenAdapter?.onNotificationOpen(notification);
     });
   }
 

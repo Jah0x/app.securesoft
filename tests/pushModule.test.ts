@@ -19,6 +19,7 @@ class FakePermissions implements PushPermissionAdapter {
 class FakeRuntime implements PushRuntimeAdapter {
   private foregroundHandler: ((notification: any) => Promise<void>) | null = null;
   private backgroundHandler: ((notification: any) => Promise<void>) | null = null;
+  private openHandler: ((notification: any) => Promise<void>) | null = null;
 
   onForegroundMessage(handler: (notification: any) => Promise<void>): void {
     this.foregroundHandler = handler;
@@ -28,12 +29,28 @@ class FakeRuntime implements PushRuntimeAdapter {
     this.backgroundHandler = handler;
   }
 
+  onNotificationOpen(handler: (notification: any) => Promise<void>): void {
+    this.openHandler = handler;
+  }
+
   async emitForeground(notification: any): Promise<void> {
     await this.foregroundHandler?.(notification);
   }
 
   async emitBackground(notification: any): Promise<void> {
     await this.backgroundHandler?.(notification);
+  }
+
+  async emitOpen(notification: any): Promise<void> {
+    await this.openHandler?.(notification);
+  }
+}
+
+class FakeNotificationOpenHandler {
+  openedIds: string[] = [];
+
+  async onNotificationOpen(notification: { id: string }): Promise<void> {
+    this.openedIds.push(notification.id);
   }
 }
 
@@ -151,6 +168,40 @@ describe("PushModule", () => {
 
     const cached = await push.getCachedInbox();
     expect(cached.map((item) => item.id)).toEqual(["n3", "n2"]);
+  });
+
+  it("при open сохраняет inbox и вызывает навигационный callback", async () => {
+    const store = new InMemorySecureStore();
+    const api = new FakeHttpClient();
+    const auth = new AuthModule(api as never, store);
+    await auth.login("acc1", "user@example.com", "pw");
+
+    const runtime = new FakeRuntime();
+    const openHandler = new FakeNotificationOpenHandler();
+    const push = new PushModule(
+      api as never,
+      auth,
+      new DeviceModule(store),
+      store,
+      new FakePermissions(),
+      runtime,
+      openHandler,
+    );
+
+    push.enableRuntimeHandling();
+
+    await runtime.emitOpen({
+      id: "n-open",
+      title: "Open",
+      body: "Navigate",
+      deep_link: "app://status",
+      created_at: new Date().toISOString(),
+      is_read: false,
+    });
+
+    const cached = await push.getCachedInbox();
+    expect(cached[0]?.id).toBe("n-open");
+    expect(openHandler.openedIds).toEqual(["n-open"]);
   });
 
 });
