@@ -10,6 +10,8 @@ on:
 
 jobs:
   lint-test-build:
+    name: Classic launch gate (core modules, fail-fast)
+    # Fail-fast by design: this classic launch gate validates core modules in strict sequence.
     runs-on: ubuntu-latest
 
     steps:
@@ -28,11 +30,17 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Test
-        run: npm test
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Integration tests
+        run: npm run test:integration
 
       - name: Build
         run: npm run build
+
+      - name: E2E tests
+        run: npm run test:e2e
 
       - name: Semver validation
         run: npm run check:semver
