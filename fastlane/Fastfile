@@ -1,27 +1,114 @@
 def require_env!(name)
   value = ENV[name]
   UI.user_error!("Missing required env #{name}") if value.nil? || value.empty?
+  value
 end
 
-platform :ios do
-  desc "Upload build to TestFlight"
-  lane :beta do
-    require_env!("APP_STORE_CONNECT_API_KEY_ID")
-    require_env!("APP_STORE_CONNECT_ISSUER_ID")
-    require_env!("APP_STORE_CONNECT_API_KEY_CONTENT")
+def dry_run?
+  ENV.fetch("DRY_RUN", "false").to_s.downcase == "true"
+end
 
-    UI.message("iOS TestFlight lane configured")
-    UI.message("Bundle upload must be triggered in mobile-native repo")
+def bool_env(name, default)
+  value = ENV[name]
+  return default if value.nil? || value.empty?
+
+  value.to_s.downcase == "true"
+end
+
+IOS_OUTPUT_DIRECTORY = ENV.fetch("IOS_OUTPUT_DIRECTORY", "fastlane/artifacts/ios")
+IOS_IPA_NAME = ENV.fetch("IOS_IPA_NAME", "app-test-release.ipa")
+IOS_EXPORT_METHOD = ENV.fetch("IOS_EXPORT_METHOD", "app-store")
+IOS_SCHEME = ENV.fetch("IOS_SCHEME", "Runner")
+IOS_WORKSPACE = ENV["IOS_WORKSPACE"]
+IOS_PROJECT = ENV["IOS_PROJECT"]
+IOS_CONFIGURATION = ENV.fetch("IOS_CONFIGURATION", "Release")
+IOS_CLEAN = bool_env("IOS_CLEAN", true)
+IOS_SKIP_WAITING_FOR_BUILD_PROCESSING = bool_env("IOS_SKIP_WAITING_FOR_BUILD_PROCESSING", true)
+
+ANDROID_AAB_PATH = ENV.fetch(
+  "ANDROID_AAB_PATH",
+  "app/build/outputs/bundle/release/app-release.aab"
+)
+ANDROID_MAPPING_PATH = ENV["ANDROID_MAPPING_PATH"]
+
+platform :ios do
+  desc "Build test release and upload to TestFlight"
+  lane :beta do
+    key_id = require_env!("APP_STORE_CONNECT_API_KEY_ID")
+    issuer_id = require_env!("APP_STORE_CONNECT_ISSUER_ID")
+    key_content = require_env!("APP_STORE_CONNECT_API_KEY_CONTENT")
+
+    UI.message("iOS artifacts: #{IOS_OUTPUT_DIRECTORY}/#{IOS_IPA_NAME}")
+    UI.message("iOS signing parameters are expected from CI env (match/profiles/export options)")
+
+    if dry_run?
+      UI.important("DRY_RUN=true -> skipping iOS build and TestFlight upload")
+      next
+    end
+
+    api_key = app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: issuer_id,
+      key_content: key_content,
+      is_key_content_base64: bool_env("APP_STORE_CONNECT_API_KEY_BASE64", false)
+    )
+
+    build_app(
+      scheme: IOS_SCHEME,
+      workspace: IOS_WORKSPACE,
+      project: IOS_PROJECT,
+      configuration: IOS_CONFIGURATION,
+      clean: IOS_CLEAN,
+      export_method: IOS_EXPORT_METHOD,
+      output_directory: IOS_OUTPUT_DIRECTORY,
+      output_name: IOS_IPA_NAME,
+      silent: false
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      ipa: File.join(IOS_OUTPUT_DIRECTORY, IOS_IPA_NAME),
+      skip_waiting_for_build_processing: IOS_SKIP_WAITING_FOR_BUILD_PROCESSING,
+      distribute_external: bool_env("IOS_DISTRIBUTE_EXTERNAL", false),
+      notify_external_testers: bool_env("IOS_NOTIFY_EXTERNAL_TESTERS", false),
+      changelog: ENV["TEST_RELEASE_NOTES"]
+    )
+
+    UI.success("iOS test release uploaded to TestFlight")
   end
 end
 
 platform :android do
-  desc "Upload build to Google Play Internal"
+  desc "Build AAB and upload to Google Play Internal track"
   lane :internal do
-    require_env!("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")
-    require_env!("ANDROID_PACKAGE_NAME")
+    json_key_data = require_env!("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON")
+    package_name = require_env!("ANDROID_PACKAGE_NAME")
 
-    UI.message("Android internal lane configured")
-    UI.message("AAB upload must be triggered in mobile-native repo")
+    UI.message("Android artifacts: #{ANDROID_AAB_PATH}")
+    UI.message("Android signing is expected from CI env/gradle properties (keystore + passwords)")
+
+    if dry_run?
+      UI.important("DRY_RUN=true -> skipping Android build and Play upload")
+      next
+    end
+
+    gradle(
+      task: "bundle",
+      build_type: "Release"
+    )
+
+    upload_to_play_store(
+      track: "internal",
+      package_name: package_name,
+      json_key_data: json_key_data,
+      aab: ANDROID_AAB_PATH,
+      mapping: ANDROID_MAPPING_PATH,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      release_status: ENV.fetch("ANDROID_RELEASE_STATUS", "completed")
+    )
+
+    UI.success("Android test release uploaded to Google Play Internal track")
   end
 end
