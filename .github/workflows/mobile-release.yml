@@ -24,10 +24,55 @@ jobs:
       - run: npm run test:integration
       - run: npm run test:e2e
 
+  secrets-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate required mobile release secrets
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+          FASTLANE_SESSION: ${{ secrets.FASTLANE_SESSION }}
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          ANDROID_PACKAGE_NAME: ${{ secrets.ANDROID_PACKAGE_NAME }}
+        run: |
+          missing=()
+          required_secrets=(
+            APP_STORE_CONNECT_API_KEY_ID
+            APP_STORE_CONNECT_ISSUER_ID
+            APP_STORE_CONNECT_API_KEY_CONTENT
+            FASTLANE_SESSION
+            GOOGLE_PLAY_SERVICE_ACCOUNT_JSON
+            ANDROID_PACKAGE_NAME
+          )
+
+          for secret_name in "${required_secrets[@]}"; do
+            if [ -z "${!secret_name}" ]; then
+              missing+=("${secret_name}")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            {
+              echo "## ❌ Mobile release preflight failed"
+              echo "The following required secrets are missing:"
+              for secret_name in "${missing[@]}"; do
+                echo "- ${secret_name}"
+              done
+            } >> "${GITHUB_STEP_SUMMARY}"
+
+            echo "Missing required secrets: ${missing[*]}" >&2
+            exit 1
+          fi
+
+          {
+            echo "## ✅ Mobile release preflight passed"
+            echo "All required secrets are available."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
   publish-mobile:
     runs-on: macos-latest
-    needs: quality-gate
-    if: ${{ secrets.FASTLANE_SESSION != '' }}
+    needs: [quality-gate, secrets-preflight]
     env:
       FASTLANE_SESSION: ${{ secrets.FASTLANE_SESSION }}
       APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
