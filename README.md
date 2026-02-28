@@ -34,6 +34,7 @@ npm run lint
 npm test
 npm run test:integration
 npm run test:e2e
+npm run test:e2e:mobile:smoke
 npm run build
 npm run check:semver
 ```
@@ -49,3 +50,4 @@ npm run check:semver
 - [Developer Mobile README](./docs/DEVELOPER_MOBILE_README.md).
 - [User Support Guide](./docs/USER_SUPPORT_GUIDE.md).
 - [QA Smoke Checklist](./docs/QA_SMOKE.md).
+- [Mobile E2E Smoke Runner](./docs/MOBILE_E2E_SMOKE_RUNNER.md).

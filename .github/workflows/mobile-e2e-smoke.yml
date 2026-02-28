@@ -1,0 +1,39 @@
+name: mobile-e2e-smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      mobile_driver:
+        description: "Device driver (appium|detox)"
+        required: true
+        default: "appium"
+
+jobs:
+  mobile-smoke:
+    # runner должен иметь доступ к device farm/реальному устройству и сети
+    runs-on: self-hosted
+    timeout-minutes: 30
+    env:
+      MOBILE_SMOKE_DRIVER: ${{ github.event.inputs.mobile_driver }}
+      SMOKE_SESSION_CMD: ${{ vars.SMOKE_SESSION_CMD }}
+      SMOKE_DROP_CMD: ${{ vars.SMOKE_DROP_CMD }}
+      SMOKE_RESTORE_CMD: ${{ vars.SMOKE_RESTORE_CMD }}
+      SMOKE_MAX_RECONNECT_MS: ${{ vars.SMOKE_MAX_RECONNECT_MS || '3500' }}
+      SMOKE_MAX_REFRESH_MS: ${{ vars.SMOKE_MAX_REFRESH_MS || '2500' }}
+      SMOKE_MAX_RETRIES: ${{ vars.SMOKE_MAX_RETRIES || '2' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run mobile smoke suite
+        run: npm run test:e2e:mobile:smoke
