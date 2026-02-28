@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
+    "test:unit": "vitest run --exclude tests/integrationExtendedHttpMocks.test.ts --exclude tests/e2eFlowSimulation.test.ts",
     "lint": "tsc --noEmit",
     "check:semver": "node scripts/check-semver.mjs",
     "test:integration": "vitest run tests/integrationExtendedHttpMocks.test.ts",
