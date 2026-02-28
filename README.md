@@ -51,3 +51,4 @@ npm run check:semver
 - [User Support Guide](./docs/USER_SUPPORT_GUIDE.md).
 - [QA Smoke Checklist](./docs/QA_SMOKE.md).
 - [Mobile E2E Smoke Runner](./docs/MOBILE_E2E_SMOKE_RUNNER.md).
+- [Deploy Classic](./DEPLOY_CLASSIC.md).

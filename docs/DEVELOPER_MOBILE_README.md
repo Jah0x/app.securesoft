@@ -33,12 +33,20 @@ npm run check:semver
 
 - Основной workflow: `.github/workflows/ci.yml`.
 - Мобильный dry-run релизов: `.github/workflows/mobile-release.yml`.
-- Workflow умеет выполнять fastlane только при наличии `FASTLANE_*` секретов.
+- Детальный процесс деплоя: `../DEPLOY_CLASSIC.md`.
 
 ## Секреты
 
+- `APP_STORE_CONNECT_API_KEY_ID`
+- `APP_STORE_CONNECT_ISSUER_ID`
+- `APP_STORE_CONNECT_API_KEY_CONTENT`
 - `FASTLANE_SESSION`
-- `FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD`
-- `PLAY_SERVICE_ACCOUNT_JSON`
-- `APNS_KEY_ID`, `APNS_ISSUER_ID`, `APNS_PRIVATE_KEY`
-- `FCM_SERVER_KEY`
+- `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
+- `ANDROID_PACKAGE_NAME`
+
+> Список выше синхронизирован с `.github/workflows/mobile-release.yml` и должен совпадать по именам 1-в-1.
+
+## Known limitations этого репо
+
+- Этот репозиторий покрывает TypeScript core и release orchestration.
+- Нативные вопросы (signing/provisioning, entitlements/capabilities, store metadata и platform-specific build issues) решаются в mobile-native repo.
