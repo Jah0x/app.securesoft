@@ -2,6 +2,14 @@
 
 Стартовая реализация core-слоя мобильного VPN-клиента (Android/iOS) по ТЗ из `MOBILE_APPS_SPEC.md`.
 
+> Status: this repository contains the TypeScript mobile core and release orchestration. It is not yet a complete production Android/iOS application. React Native UI, native VPN bridge implementations, platform signing, store metadata and production backend integration must be connected or referenced separately.
+
+## Investor / product readiness docs
+
+- [Project status and roadmap](./docs/PROJECT_STATUS_AND_ROADMAP.md) — current state, gaps, AI-native wedge and 30-day cleanup plan.
+- [OpenAI Startup Fund preparation plan](./docs/OPENAI_STARTUP_FUND_PLAN.md) — fit assessment, outreach draft, deck outline and red flags.
+- [Security policy](./SECURITY.md) — vulnerability reporting, sensitive-data rules and AI diagnostics redaction rules.
+
 ## Что реализовано
 
 - `AuthModule` — login/refresh/logout, OAuth login, хранение списка аккаунтов/активного аккаунта, anti-race защита при refresh после 401 и cleanup hooks для модулей при logout.
@@ -24,7 +32,7 @@
 - `src/storage` — абстракция защищенного хранилища (сейчас in-memory адаптер для тестов).
 - `src/types` — контракты API и VPN state machine.
 - `tests` — unit/integration/e2e-simulation тесты.
-- `docs` — developer и пользовательская документация.
+- `docs` — developer, QA, investor-readiness и пользовательская документация.
 
 ## Запуск
 
